@@ -136,6 +136,38 @@ export const REFS = {
   },
 };
 
+// Help, not a source: opens in the same portal, but isn't numbered or listed at the end
+export const HELP = {
+  ar: {
+    title: "Playing in AR",
+    body: `<h4>Where AR works</h4>
+      <ul><li>In <b>Chrome on an Android phone or tablet</b> that supports Google Play Services for AR.</li>
+        <li>Not on an iPhone, iPad or computer yet: their browsers can't open it. There, the game plays here on the screen, with the same circles.</li></ul>
+      <h4>You weren't asked about AR</h4>
+      <ul><li>The page only offers AR when the browser says it can do it.</li>
+        <li>On Android, open the page in Chrome itself, not inside another app (such as Gmail or WhatsApp).</li>
+        <li>Install or update <b>Google Play Services for AR</b> from the Play Store, update Chrome, then reload the page.</li></ul>
+      <h4>AR doesn't start</h4>
+      <ul><li>Allow the camera when Chrome asks. If AR can't start, the game carries on here, on the screen.</li>
+        <li>Said no to the camera before? Tap the icon at the left of the address bar, then Permissions, Camera, Allow, and reload the page.</li>
+        <li>Close any other app that is using the camera.</li></ul>
+      <h4>The land is hard to see, or drifts</h4>
+      <ul><li>The land appears in front of where the tablet points. Point it at a table or the floor.</li>
+        <li>Use good light and a surface with some pattern (a wooden table, a rug); plain white or shiny ones are hard for the camera to hold on to. Move slowly.</li>
+        <li>Land off to one side? Point the tablet where you want it and press <b>Bring it here</b>.</li></ul>
+      <h4>Moving the land</h4>
+      <ul><li><b>+</b> and <b>−</b>, or pinch: closer and further.</li>
+        <li>The round pad: turn the land round, and tip it toward you or back. Two fingers twisting turn it too.</li></ul>
+      <h4>Marking young shrubs</h4>
+      <ul><li>Go into the green circle first: <b>Mark</b> works only there.</li>
+        <li>Move the tablet until the white ring sits on a young sagebrush, and press <b>Mark</b>. When you have marked all you can see, press <b>Check</b>.</li></ul>
+      <h4>Leaving AR</h4>
+      <ul><li>Press <b>Exit AR</b> at any time. The game carries on here, on the screen, in the same circle.</li>
+        <li>To try AR again, reload the page.</li></ul>`,
+    src: `Phones and tablets that can run AR: Google, <i>ARCore supported devices</i>. <a href="https://developers.google.com/ar/devices" target="_blank" rel="noopener">developers.google.com/ar/devices</a>`,
+  },
+};
+
 export function initRefs() {
   const links = [...document.querySelectorAll("a.ref")];
   const order = [];
@@ -154,12 +186,12 @@ export function initRefs() {
   const $ = (id) => document.querySelector(id);
   let openKey = null;
   function open(k, at) {
-    const r = REFS[k];
+    const r = REFS[k] || HELP[k];
     // the portal grows out of the link that was clicked
     const box = at?.getBoundingClientRect?.();
     portal.style.setProperty("--px", box ? `${box.left + box.width / 2}px` : "50%");
     portal.style.setProperty("--py", box ? `${box.top + box.height / 2}px` : "50%");
-    $("#portal-n").textContent = `Source ${num(k)} · ${r.title}`;
+    $("#portal-n").textContent = HELP[k] ? "Help" : `Source ${num(k)} · ${r.title}`;
     const page = !!r.page;
     portal.classList.toggle("page", page);
     $("#portal-text").hidden = page;
@@ -193,6 +225,7 @@ export function initRefs() {
   }
   // each claim opens its source, growing out of the link itself
   for (const a of links) a.onclick = (e) => { e.preventDefault(); e.stopImmediatePropagation(); open(a.dataset.ref, a); };
+  for (const a of document.querySelectorAll("a[data-help]")) a.onclick = (e) => { e.preventDefault(); open(a.dataset.help, a); };
   $("#portal-close").onclick = () => close();
   portal.addEventListener("click", (e) => { if (e.target === portal) close(); });
   addEventListener("keydown", (e) => e.key === "Escape" && close());

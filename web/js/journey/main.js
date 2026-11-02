@@ -132,7 +132,6 @@ if (!voice.available) {                       // no recording yet: no narration 
   $("#begin-sound").hidden = true; snd.hidden = true;
   $("#begin-quiet").textContent = "Begin"; $("#begin-quiet").classList.add("solid");
 }
-if (voice.available && voice.synthetic) $("#voice-note").hidden = false;
 
 // ---- guesses ----
 const guesses = {};
@@ -507,21 +506,24 @@ const io = new IntersectionObserver((es) => {
 }, { rootMargin: "-50% 0px -50% 0px" });
 steps.forEach((s) => io.observe(s));
 
-// ---- altitude: the dot is an altimeter. It shows how high the camera is right now, on a log scale from the
-// satellite's 705 km down to a person's eyes at 1.6 m (so the stations sit at 0%, 74.5% and 100%). Over the map it
-// reads the map's camera; on the ground, the 3D camera's height above the spot it looks at; in the game, you ----
-const dot = $(".dot"), stns = $$("#alt .stn");
+// ---- the rail: whose eyes the page is looking through, on a log scale from the satellite's 705 km down to a person's
+// eyes at 1.6 m (so the stations sit at 0%, 74.5% and 100%). Every page of satellite data sits at 705 km; from
+// "descend" on, the drone's pictures sit at 44 m (the dot rides down with the camera's 5.2 s flight); you, at 1.6 m,
+// only in AR, where you hold the land yourself. The game on the page, and the end, are still the drone's photo.
+// In AR the rail moves into the AR layer, the only part of the page the tablet shows then ----
+const dot = $(".dot"), stns = $$("#alt .stn"), alt = $("#alt");
 const TOP = 705000, EYE = 1.6, STN = [TOP, 44, EYE], SPAN = Math.log(TOP / EYE);
-const place = (m) => Math.min(1, Math.max(0, Math.log(TOP / Math.max(EYE, m)) / SPAN));
-let shown = 0;
+const place = (m) => Math.log(TOP / m) / SPAN;
+const DRONE = ["descend", "missed", "count", "you", "end"];
+const ease = (k) => (k < 0.5 ? 2 * k * k : 1 - (2 - 2 * k) ** 2 / 2);
+let shown = 0, from = 0, to = 0, t0 = 0, dur = 1;
 function altitude() {
-  let m;
-  if (current === "you" || current === "end") m = EYE;
-  else if (stage.classList.contains("at-ground") && ground) m = Math.max(2, ground.camera.position.y - ground.controls.target.y);
-  else m = orbit.altitude;
-  const a = place(m);
-  shown += (a - shown) * (Math.abs(a - shown) > 0.3 ? 1 : 0.12);          // eases, except across a cut
-  const narrow = innerWidth <= 760;
+  const inAR = !!ground?.inAR;
+  if (inAR !== (alt.parentNode === arUI)) inAR ? arUI.append(alt) : document.body.insertBefore(alt, clockEl);
+  const a = place(inAR ? EYE : DRONE.includes(current) ? 44 : TOP);
+  if (a !== to) { from = shown; to = a; t0 = performance.now(); dur = current === "descend" && !inAR ? 5200 : 1600; }
+  shown = from + (to - from) * ease(Math.min(1, (performance.now() - t0) / dur));
+  const narrow = innerWidth <= 760 || inAR;          // flat, as on a phone
   if (narrow) { dot.style.left = `${shown * 100}%`; dot.style.top = ""; stns.forEach((s, i) => (s.style.left = `${place(STN[i]) * 100}%`)); }
   else { dot.style.top = `${shown * 100}%`; dot.style.left = ""; stns.forEach((s) => (s.style.left = "")); }
   stns.forEach((s, i) => s.classList.toggle("here", Math.abs(shown - place(STN[i])) < 0.06));

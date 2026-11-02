@@ -144,8 +144,6 @@ a.ref sup { font: 500 10px/1 var(--sans); color: var(--muted); margin-left: 2px;
 
 /* opening: begin with or without the narrator */
 .hero .begin .btn[hidden], #snd[hidden] { display: none; }
-.hero .vnote { margin: 14px auto 0; font: 400 13px/1.4 var(--sans); color: var(--muted); }
-.hero .vnote[hidden] { display: none; }
 .hero .begin { pointer-events: auto; margin-top: 44px; display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
 .hero .begin .btn { display: inline-flex; align-items: center; gap: 8px; padding: 10px 20px; font-size: 15px; }
 .hero .begin svg { width: 18px; height: 18px; }
@@ -325,11 +323,28 @@ a.ref sup { font: 500 10px/1 var(--sans); color: var(--muted); margin-left: 2px;
 .ar-ctl .pad button { border-color: transparent; background: transparent; }
 .ar-ctl button:active { transform: scale(.9); background: rgba(242, 239, 232, .2); }
 .ar-ctl svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+/* the rail in AR: flat at the bottom right, under the controls, clear of the card and the game's panel */
+#ar-ui #alt { left: auto; right: 28px; top: auto; bottom: 36px; transform: none; width: min(280px, calc(100% - 500px)); height: 34px; }
+#ar-ui #alt .rail { left: 0; right: 0; top: 4px; bottom: auto; width: auto; height: 1px; }
+#ar-ui #alt .stn { top: 4px !important; flex-direction: column; align-items: flex-start; gap: 6px; transform: translateX(-4px); }
+#ar-ui #alt .stn::before { width: 1px; height: 7px; }
+#ar-ui #alt .stn span { white-space: nowrap; }
+#ar-ui #alt .stn[data-a="1.6"] { transform: translateX(calc(-100% + 4px)); align-items: flex-end; }
+#ar-ui #alt .dot { top: 4px !important; }
+@media (max-width: 760px) { #ar-ui #alt { display: none; } }
 /* the land's own labels, while they show in AR */
 .arlayer .landtag { font-size: 15px; }
 #ar-ui #tools { margin-top: 0; }
 #ar-ui #toolstat { font-size: 19px !important; min-height: 0; }
 .aroffer .gq { color: var(--ink); font-size: 16px; text-shadow: 0 1px 12px rgba(10, 11, 12, .95), 0 0 2px rgba(10, 11, 12, .9); }
+/* how to open AR, and what to do if it won't start: a note in the portal */
+.arhelp { display: table; margin-top: 14px; font: 400 14px/1.4 var(--sans); color: var(--muted); text-decoration: underline dotted;
+  text-decoration-color: rgba(236, 232, 225, .35); text-underline-offset: 4px; }
+.arhelp:hover { color: var(--ink); text-decoration-color: currentColor; }
+#portal-body h4 { margin: 28px 0 10px; font: 500 11px/1 var(--sans); letter-spacing: .14em; text-transform: uppercase; color: var(--ink); }
+#portal-body h4:first-child { margin-top: 4px; }
+#portal-body ul { margin: 0 0 14px; padding-left: 1.2em; color: #cfcac2; font-size: 17px; line-height: 1.6; max-width: 36rem; }
+#portal-body li + li { margin-top: 6px; }
 .aroffer .opts button:first-child { background: var(--ink); color: var(--bg); border-color: var(--ink); }
 
 /* phones: captions sit low over the picture, the rail goes horizontal at the top */
@@ -411,7 +426,6 @@ a.ref sup { font: 500 10px/1 var(--sans); color: var(--muted); margin-left: 2px;
         <button class="btn solid" id="begin-sound"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9v6h4l5 4V5L8 9H4z" fill="currentColor"/><path d="M16 8.5a5 5 0 0 1 0 7M18.5 6a8.5 8.5 0 0 1 0 12" stroke="currentColor" stroke-width="1.6" fill="none" stroke-linecap="round"/></svg>Begin with narration</button>
         <button class="btn" id="begin-quiet">Begin quietly</button>
       </div>
-      <p class="vnote" id="voice-note" hidden>Narrated by an AI voice for now, standing in for mine.</p>
       <div class="cue">or scroll</div>
     </div>
   </section>
@@ -522,6 +536,8 @@ a.ref sup { font: 500 10px/1 var(--sans); color: var(--muted); margin-left: 2px;
         <p id="gsum" hidden></p>
       </div>
     </div>
+    <!-- one help link for every case: AR or not, before, during or after the question -->
+    <a href="#" class="arhelp" data-help="ar">Help with AR</a>
   </div></section>
 
   <section class="end" data-step="end">

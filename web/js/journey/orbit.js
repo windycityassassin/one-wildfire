@@ -789,14 +789,6 @@ export async function initOrbit(el, D) {
     set cue(f) { orbitCue = f; },
     get clock() { return clock; },
     get mode() { return mode; },
-    // how high the camera is, in metres, for the altitude rail: the distance to the centre of the view, in pixels,
-    // times the ground each pixel covers there (a satellite's view at low zoom clamps to Aqua's 705 km)
-    get altitude() {
-      const z = map.getZoom(), lat = map.getCenter().lat;
-      const mpp = (156543.03 * Math.cos(lat * rad)) / Math.pow(2, z);
-      const px = map.transform?.cameraToCenterDistance || el.clientHeight * 1.5;
-      return Math.min(705000, px * mpp);
-    },
     resize: () => map.resize(),
   };
 }
