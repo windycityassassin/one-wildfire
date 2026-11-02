@@ -1,0 +1,211 @@
+{
+ "synthetic": true,
+ "voice": "Jessica Anne Bogart - Eloquent Villain (ElevenLabs, eleven_multilingual_v2)",
+ "clips": {
+  "intro": {
+   "file": "intro.mp3",
+   "text": "One wildfire. Seen three ways: by a satellite, by a drone, and by a person.",
+   "hash": "d8e0ad5cdfa4"
+  },
+  "pixels": {
+   "file": "pixels.mp3",
+   "text": "Five days of passes, and this is everything the satellites saw. No flames. No smoke. Just squares of heat. So, take a guess: how many fires is this?",
+   "hash": "1b48d3ad8f86"
+  },
+  "split": {
+   "file": "split.mp3",
+   "text": "Here is the difficulty. A computer has to decide which squares belong together. Using a careful rule from 2016, it counts them up. Thirty-eight. Thirty-eight separate fires.",
+   "hash": "9cb0076e8f88"
+  },
+  "one": {
+   "file": "one.mp3",
+   "text": "But anyone standing there would have told you: it was one fire. The Soda Fire. Give the rule a little more room, and it sees that too. One fire, nearly the size of Los Angeles.",
+   "hash": "06d723b93783"
+  },
+  "spread": {
+   "file": "spread.mp3",
+   "text": "Back to the Soda Fire. Pushed by the wind, it ran about fifty kilometres north in five days. It burned for thirteen days before it was contained.",
+   "hash": "bebf6102f328"
+  },
+  "descend": {
+   "file": "descend.mp3",
+   "text": "Then the smoke cleared, and a slower, quieter question took over. Sagebrush doesn't grow back from its roots. It has to start again, from seed. Would this land come back? Seven years later, in June 2022, someone went to look, with a small drone. Back and forth it flies over that white square, forty-four metres up, photographing every patch of ground.",
+   "hash": "7e8ace5f6ead",
+   "marks": {
+    "drone": 19.88
+   }
+  },
+  "missed": {
+   "file": "missed.mp3",
+   "text": "From its photos, software rebuilds the land in 3D. And this is how the drone sees it: not colour, but height. Anything taller than a hand lights up. That orange line is where the fire stopped.",
+   "hash": "ce7ea19ca04b",
+   "marks": {
+    "eye": 7.08,
+    "line": 12.27
+   }
+  },
+  "you": {
+   "file": "you.mp3",
+   "text": "Your turn. Can a person see what the drone can't? See this small, grey-green tuft? That's a young sagebrush. Find more like it. Tap each one, then press Check.",
+   "hash": "f824258f22f7",
+   "marks": {
+    "point": 3.85
+   }
+  },
+  "end": {
+   "file": "end.mp3",
+   "text": "Counts like these tell the people who look after this land whether it's healing, and where it needs help. From the air, this hillside looks almost lifeless. From the ground, it's quietly coming back. So here is the question I would like to explore in the Wild lab. If people could step inside the drone's view, in 3D or VR, would they catch what it misses? And would they trust what they see?",
+   "hash": "0715fd90e5bd"
+  },
+  "start": {
+   "file": "start.mp3",
+   "text": "What is it? Go back to earlier that day. The sagebrush country where Idaho meets Oregon. The day is warm, the air is dry, and the wind is strong. Then... lightning. One strike. And by seven minutes past two, the satellite saw nine squares of heat. Each square is a place it saw burning: white when it's new, red as it ages.",
+   "hash": "29dfad404e99",
+   "marks": {
+    "strike": 12.42
+   }
+  },
+  "sat": {
+   "file": "sat.mp3",
+   "text": "The tenth of August, 2015. Seven minutes past two in the afternoon. Seven hundred and five kilometres above the Earth, a NASA satellite called Aqua is flying north over the American West. As it goes, it sweeps a strip of Earth more than two thousand kilometres wide, looking for heat.",
+   "hash": "2ff2cacd287a"
+  },
+  "fires-1": {
+   "file": "fires-1.mp3",
+   "text": "One. Hold that thought.",
+   "hash": "0038f416c9fd"
+  },
+  "fires-10": {
+   "file": "fires-10.mp3",
+   "text": "About ten. Let's see what the computer thinks.",
+   "hash": "29f68e53e344"
+  },
+  "fires-40": {
+   "file": "fires-40.mp3",
+   "text": "About forty. Let's see what the computer thinks.",
+   "hash": "9975882420a1"
+  },
+  "check": {
+   "file": "check.mp3",
+   "text": "Green rings are the young shrubs the crew found. Blue means the drone found it too.",
+   "hash": "b3cdfefde048"
+  },
+  "done": {
+   "file": "done.mp3",
+   "text": "That's every circle. Add it all up, and the people on the ground saw far more new life than the drone did.",
+   "hash": "fbf5c7b4f694"
+  },
+  "you-all": {
+   "file": "you-all.mp3",
+   "text": "You found every one. Sharp eyes. Can you do it again?",
+   "hash": "be74f4f9007b"
+  },
+  "you-all-1": {
+   "file": "you-all-1.mp3",
+   "text": "You found it. Can you do it again?",
+   "hash": "f0a6bd3c274f"
+  },
+  "you-some": {
+   "file": "you-some.mp3",
+   "text": "You found some of them. Hard, isn't it?",
+   "hash": "dd245a9e70b7"
+  },
+  "you-none": {
+   "file": "you-none.mp3",
+   "text": "Hard, isn't it? They're tiny.",
+   "hash": "361b5c7c3280"
+  },
+  "spot": {
+   "file": "spot.mp3",
+   "text": "And there, near the edge of the strip, it detects heat. Let's look closer... and closer still... A square of heat, about a kilometre across.",
+   "hash": "efa3b8d132bf",
+   "marks": {
+    "z1": 4.27,
+    "z2": 5.8,
+    "z3": 7.67
+   }
+  },
+  "us": {
+   "file": "us.mp3",
+   "text": "Was that just luck? I tried the same idea on fourteen hundred and thirty-one fires across the country, from 2020 to 2024. The yellow ones, the 2016 rule already got right: fifty-seven percent. The orange ones are the fires that more room fixed. Seventy-four percent.",
+   "hash": "a45de205bf33",
+   "marks": {
+    "flip": 16.57
+   }
+  },
+  "you-all-b": {
+   "file": "you-all-b.mp3",
+   "text": "Every single one. You're good at this.",
+   "hash": "e8b7beee4a29"
+  },
+  "you-all-c": {
+   "file": "you-all-c.mp3",
+   "text": "All of them. Nicely done. Can you keep it up?",
+   "hash": "57559ffbba00"
+  },
+  "you-all-1b": {
+   "file": "you-all-1b.mp3",
+   "text": "Found it. Well spotted.",
+   "hash": "4c1f9b0edb74"
+  },
+  "you-all-1c": {
+   "file": "you-all-1c.mp3",
+   "text": "That's the one. Good eye.",
+   "hash": "a84ca2f575ef"
+  },
+  "you-some-b": {
+   "file": "you-some-b.mp3",
+   "text": "Some of them. The small ones hide well, don't they?",
+   "hash": "3c429610f243"
+  },
+  "you-some-c": {
+   "file": "you-some-c.mp3",
+   "text": "A few of them. Not bad: they're easy to miss.",
+   "hash": "9dca154d9b2e"
+  },
+  "you-none-b": {
+   "file": "you-none-b.mp3",
+   "text": "Tricky, that one. They're very small.",
+   "hash": "9e2f1f334db7"
+  },
+  "you-none-c": {
+   "file": "you-none-c.mp3",
+   "text": "Not easy, is it? They blend right into the ground.",
+   "hash": "6c35c5424da3"
+  },
+  "count": {
+   "file": "count.mp3",
+   "text": "Look at the two sides of that line. On one, the old sagebrush survived. On the other, the fire burned it away. But on the burned side, life is starting again, in young shrubs. In this one circle, the drone found three. People walked this ground too, and counted every young shrub on foot. How many do you think they found?",
+   "hash": "c9f3f55aecab",
+   "marks": {
+    "circle": 9.24,
+    "ask": 17.84
+   }
+  },
+  "crew-right": {
+   "file": "crew-right.mp3",
+   "text": "That's right. Thirty. Ten times what the drone saw. Across the whole burned side, the drone caught two in three of the big shrubs, but only about eight young ones in every hundred.",
+   "hash": "a42b242c1a56"
+  },
+  "crew-wrong": {
+   "file": "crew-wrong.mp3",
+   "text": "More than that. Thirty. Ten times what the drone saw. Across the whole burned side, the drone caught two in three of the big shrubs, but only about eight young ones in every hundred.",
+   "hash": "0a935d23f8fc"
+  },
+  "crew-answer": {
+   "file": "crew-answer.mp3",
+   "text": "They found thirty. Ten times what the drone saw. Across the whole burned side, the drone caught two in three of the big shrubs, but only about eight young ones in every hundred.",
+   "hash": "f95610cdfa11"
+  },
+  "you-ask": {
+   "file": "you-ask.mp3",
+   "text": "Next, you look for the young shrubs yourself. You can do it here, on the screen, or in AR, with the land on the table in front of you.",
+   "hash": "9187e184f893"
+  },
+  "ar-ask": {
+   "file": "ar-ask.mp3",
+   "text": "Here's one circle. People on foot found eight young shrubs in it. How many do you think you can find?",
+   "hash": "e93111103530"
+  }
+ }
+}

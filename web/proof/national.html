@@ -1,0 +1,291 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 16 16%22%3E%3Crect width=%2216%22 height=%2216%22 rx=%223%22 fill=%22%230a0b0c%22/%3E%3Ccircle cx=%228%22 cy=%228%22 r=%223.2%22 fill=%22%23ff6a2b%22/%3E%3C/svg%3E">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>57% to 74%</title>
+<meta name="description" content="The proof behind 'Was that luck?': the 2016 rule and a wider window, scored on 1,431 US fires.">
+<meta name="theme-color" content="#0a0b0c">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:wght@400;500&display=swap">
+<style>
+:root { --bg: #0a0b0c; --ink: #ece8e1; --muted: #8e8981; --line: #2c2b29; --fire: #ff6a2b; --machine: #8fd3ff; --life: #a6f05a;
+  --serif: "Instrument Serif", Georgia, serif; --sans: "Inter", system-ui, sans-serif; color-scheme: dark; }
+* { box-sizing: border-box; }
+html { background: var(--bg); }
+body { margin: 0; background: var(--bg); color: var(--ink); font: 16px/1.65 var(--sans); -webkit-font-smoothing: antialiased; }
+main { max-width: 52rem; margin: 0 auto; padding: 64px 20px 120px; }
+.embed main { padding-top: 40px; }
+.embed .back { display: none; }
+a { color: inherit; text-underline-offset: 3px; text-decoration-color: rgba(236, 232, 225, .4); }
+.back { font-size: 13px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); text-decoration: none; }
+.kicker { font: 500 11px/1 var(--sans); letter-spacing: .14em; text-transform: uppercase; color: var(--muted); margin-top: 28px; }
+h1 { font: 400 clamp(56px, 10vw, 104px)/.95 var(--serif); margin: 14px 0 18px; letter-spacing: -.015em; }
+h1 .to { color: var(--muted); font-style: italic; font-size: .55em; vertical-align: .25em; margin: 0 .2em; }
+h1 .after { color: var(--fire); }
+h2 { font: 400 32px/1.15 var(--serif); margin: 88px 0 10px; }
+.lede { font: 400 clamp(20px, 2.2vw, 24px)/1.45 var(--serif); color: #cfcac2; max-width: 36rem; margin: 0; }
+p { color: #cfcac2; max-width: 38rem; }
+b { color: var(--ink); font-weight: 500; }
+.muted { color: var(--muted); }
+.fire { color: var(--fire); }
+
+/* the map of every fire */
+#map { margin-top: 36px; }
+#map svg { width: 100%; height: auto; display: block; }
+.legend { display: flex; flex-wrap: wrap; gap: 8px 22px; margin-top: 14px; font-size: 14px; color: var(--muted); }
+.legend span { display: inline-flex; align-items: center; gap: 8px; cursor: default; }
+.legend i { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+.legend b { font: 400 22px/1 var(--serif); color: var(--ink); }
+#tip { position: fixed; pointer-events: none; z-index: 5; padding: 8px 12px; border-radius: 10px; background: rgba(22, 23, 24, .96);
+  box-shadow: 0 0 0 1px rgba(242, 239, 232, .12); font-size: 13px; line-height: 1.45; color: #cfcac2; opacity: 0; transition: opacity .15s; max-width: 260px; }
+#tip b { display: block; font-size: 14px; }
+
+/* the four fires */
+.fires { display: grid; grid-template-columns: repeat(4, 1fr); gap: 18px; margin-top: 28px; }
+@media (max-width: 720px) { .fires { grid-template-columns: repeat(2, 1fr); } }
+.firepanel { margin: 0; }
+.firepanel canvas { display: block; border-radius: 10px; background: #111213; }
+.firepanel figcaption { display: grid; grid-template-columns: 1fr auto; gap: 0 8px; margin-top: 10px; font-size: 13px; }
+.firepanel .fn { color: var(--ink); font-weight: 500; }
+.firepanel .fs { color: var(--muted); grid-column: 1; }
+.firepanel .fc { grid-column: 2; grid-row: 1 / 3; align-self: center; font: 400 26px/1 var(--serif); white-space: nowrap; }
+.firepanel .fc i { font-style: normal; color: var(--muted); margin: 0 .2em; font-size: .7em; }
+.firepanel .fc .b { color: var(--muted); transition: color .6s; }
+.firepanel.merged .fc .b { color: var(--fire); }
+.firepanel.merged .fc .a { color: var(--muted); }
+.toggle { display: inline-flex; margin-top: 18px; border: 1px solid rgba(242, 239, 232, .22); border-radius: 999px; padding: 3px; }
+.toggle button { border: 0; background: none; color: var(--muted); font: 14px var(--sans); padding: 7px 16px; border-radius: 999px; cursor: pointer; }
+.toggle button[aria-pressed="true"] { background: var(--ink); color: var(--bg); }
+
+/* regions */
+#regions svg { width: 100%; max-width: 40rem; height: auto; display: block; margin-top: 18px; }
+#regions text { font: 400 13px var(--sans); fill: var(--muted); }
+#regions .v { font: 400 18px var(--serif); fill: var(--ink); }
+#regions .all text { fill: var(--ink); }
+
+/* how it is scored: two small pictures */
+.rules { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 18px; margin-top: 22px; }
+.rule { padding: 18px 18px 14px; border-radius: 14px; background: #121314; }
+.rule svg { width: 100%; height: 76px; display: block; }
+.rule p { font-size: 14px; margin: 10px 0 0; }
+
+/* table */
+.search { display: flex; gap: 12px; align-items: center; margin-top: 18px; flex-wrap: wrap; }
+.search input { flex: 1 1 220px; background: #121314; border: 1px solid var(--line); border-radius: 999px; color: var(--ink); font: 15px var(--sans); padding: 10px 16px; }
+.search input:focus { outline: 1.5px solid var(--ink); outline-offset: 2px; }
+.tablewrap { overflow-x: auto; margin-top: 14px; }
+table { width: 100%; border-collapse: collapse; font-size: 14px; font-variant-numeric: tabular-nums; min-width: 520px; }
+th, td { text-align: left; padding: 8px 10px 8px 0; border-bottom: 1px solid var(--line); white-space: nowrap; }
+th { font-weight: 500; color: var(--muted); font-size: 12px; letter-spacing: .04em; }
+td.n, th.n { text-align: right; }
+td .ok { color: var(--life); } td .no { color: #77736c; }
+td.fixed { color: var(--fire); }
+tr.hl td { background: rgba(255, 106, 43, .07); }
+.more { margin-top: 14px; }
+.btn { border: 1px solid rgba(242, 239, 232, .28); background: transparent; border-radius: 999px; padding: 8px 16px; cursor: pointer; font: 14px var(--sans); color: var(--ink); }
+.btn:hover { background: rgba(242, 239, 232, .08); }
+.src { margin-top: 88px; padding-top: 18px; border-top: 1px solid var(--line); font-size: 13px; line-height: 1.6; color: var(--muted); }
+.src p { color: var(--muted); max-width: none; }
+.src a { color: #cfcac2; word-break: break-word; }
+</style>
+</head>
+<body>
+<main>
+  <a class="back" href="../index.html">← 705 km to 1.6 m</a>
+  <div class="kicker">Proof · Was that luck?</div>
+  <h1><span class="before">57%</span><span class="to">to</span><span class="after">74%</span></h1>
+  <p class="lede">I ran the 2016 rule, and the same rule with more room, on every large fire in the US from 2020 to 2024. Then I checked each answer against the fire's official outline.</p>
+
+  <section id="map" aria-label="Every fire on a map"></section>
+  <div class="legend" id="legend"></div>
+  <p class="muted" style="font-size:14px;margin-top:14px">Each dot is one fire, sized by how many hot spots the satellites saw. Hover or tap a dot for its name.</p>
+
+  <h2 id="fires">Four fires, up close</h2>
+  <p>Each square is one hot spot, coloured by the group it was put in. With the 2016 rule, one fire becomes many groups (many colours). With more room, they join into one (orange). Grey squares are leftovers that stayed apart.</p>
+  <div class="toggle" role="group" aria-label="Which rule"><button id="t16" aria-pressed="false">2016 rule</button><button id="tw" aria-pressed="true">More room</button></div>
+  <div class="fires" id="fourfires"></div>
+
+  <h2 id="regions-h">In every region</h2>
+  <p>The share of fires counted correctly, region by region. The setting with more room was never tuned on the region it is scored on: for each region, I picked the setting that worked best on the other five, then tested it on the one left out.</p>
+  <div id="regions"></div>
+
+  <h2>What "counted correctly" means</h2>
+  <p>Every fire has an official outline. A fire counts as correct when <b>one group holds at least 9 in 10 of its hot spots</b>, and <b>at least 9 in 10 of that group's hot spots are inside it</b>. So there are two ways to fail:</p>
+  <div class="rules">
+    <div class="rule"><svg viewBox="0 0 220 76" aria-hidden="true" id="r-split"></svg><p><b>Split.</b> One fire, broken into pieces. This is how the 2016 rule fails <b id="splitshare"></b>.</p></div>
+    <div class="rule"><svg viewBox="0 0 220 76" aria-hidden="true" id="r-merge"></svg><p><b>Merged.</b> A fire joined to other burning nearby. More room makes this more likely.</p></div>
+  </div>
+
+  <h2>What more room costs</h2>
+  <p id="costs"></p>
+
+  <h2 id="table">Every fire</h2>
+  <p>All <b id="nf"></b> fires, largest first. Search by name, state or year.</p>
+  <div class="search"><input id="q" type="search" placeholder="Search, e.g. Colorado, Creek, 2021" aria-label="Search fires"><span class="muted" id="qn" style="font-size:14px"></span></div>
+  <div class="tablewrap"><table>
+    <thead><tr><th>Fire</th><th>State</th><th class="n">Year</th><th class="n">Hot spots</th><th class="n">2016 rule</th><th class="n">More room</th></tr></thead>
+    <tbody id="rows"></tbody>
+  </table></div>
+  <div class="more"><button class="btn" id="all" hidden></button></div>
+  <p class="muted" style="font-size:13px">Each cell gives the number of groups the fire's hot spots ended up in, and whether it counts as correct (✓). Orange rows are fires that more room fixed.</p>
+
+  <div class="src">
+    <p><b>Sources.</b> Hot spots: NASA FIRMS, MODIS Collection 6.1 active fires (Terra and Aqua), vegetation fires with confidence 30 or higher, <a href="https://firms.modaps.eosdis.nasa.gov/" target="_blank" rel="noopener">firms.modaps.eosdis.nasa.gov</a>. Official outlines: National Interagency Fire Center, <i>WFIGS Interagency Fire Perimeters</i>, fires of 100 acres or more, 2020–2024, <a href="https://data-nifc.opendata.arcgis.com/datasets/nifc::wfigs-interagency-fire-perimeters/about" target="_blank" rel="noopener">data-nifc.opendata.arcgis.com</a>. The 2016 rule: Cattau, M.E. et al. (2016), <i>Global Environmental Change</i> 39: 205–219, <a href="https://doi.org/10.1016/j.gloenvcha.2016.05.005" target="_blank" rel="noopener">doi:10.1016/j.gloenvcha.2016.05.005</a>. State outlines: PublicaMundi <i>us-states.json</i> (from U.S. Census boundaries).</p>
+    <p><b>Method.</b> The 2016 rule joins hot spots within 1.5 km and 4 days of each other (my equivalent, on hot-spot centres, of "the same 1 km cell or any of its 8 neighbours, within 4 days"). More room: 4 km and 14 days (4 km and 10 days in the Great Basin and Northern Rockies, as chosen by the left-out test). Fires with fewer than 3 hot spots are not scored. The Soda Fire (2015) is outside the 2020–2024 test; it uses 4 km and 14 days. Code: <code>pipeline/13_train_eval.py</code> (the test) and <code>pipeline/32_proof.py</code> (this page, which re-scores every fire and checks the totals match). More in <a href="../methods.html" target="_top">How this was made</a>.</p>
+  </div>
+</main>
+<div id="tip" role="tooltip"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.9.0/d3.min.js"></script>
+<script type="module">
+import { firePanel } from "../js/journey/fires.js";
+
+if (new URLSearchParams(location.search).has("embed")) document.documentElement.classList.add("embed");
+const $ = (s) => document.querySelector(s);
+const pct = (v) => `${Math.round(v * 100)}%`;
+const fmt = (v) => v.toLocaleString("en-US");
+
+const [N, US, SODA] = await Promise.all([
+  fetch("../data/proof/national.json").then((r) => r.json()),
+  fetch("../data/proof/us-states.json").then((r) => r.json()),
+  fetch("../data/soda/soda.json").then((r) => r.json()),
+]);
+const fires = N.fires.map((r) => Object.fromEntries(N.cols.map((c, i) => [c, r[i]])));
+const kind = (f) => (f.ok16 && f.okw ? "both" : !f.ok16 && f.okw ? "fixed" : f.ok16 ? "broken" : "neither");
+const KINDS = {
+  fixed: { label: "fixed by more room", color: "#ff6a2b" },
+  both: { label: "right both ways", color: "#cfcac2" },
+  neither: { label: "wrong both ways", color: "#4a4741" },
+  broken: { label: "broken by more room", color: "#8fd3ff" },
+};
+const count = Object.fromEntries(Object.keys(KINDS).map((k) => [k, fires.filter((f) => kind(f) === k).length]));
+
+// ---- the map ----
+(function map() {
+  const W = 960, H = 560;
+  // d3 reads a polygon wound the "wrong" way as the whole globe minus that state: turn any such state around
+  const fix = (poly) => (d3.geoArea({ type: "Polygon", coordinates: poly }) > 2 * Math.PI ? poly.map((ring) => [...ring].reverse()) : poly);
+  for (const { geometry: g } of US.features) g.coordinates = g.type === "Polygon" ? fix(g.coordinates) : g.coordinates.map(fix);
+  const proj = d3.geoConicEqualArea().parallels([29.5, 45.5]).rotate([96, 0]).fitExtent([[10, 10], [W - 10, H - 10]], US);
+  const path = d3.geoPath(proj);
+  const r = d3.scaleSqrt().domain([0, d3.max(fires, (f) => f.n)]).range([1.6, 15]);
+  const svg = d3.select("#map").append("svg").attr("viewBox", `0 0 ${W} ${H}`).attr("role", "img")
+    .attr("aria-label", `${fires.length} fires: ${count.fixed} fixed by more room, ${count.both} right both ways, ${count.neither} wrong both ways, ${count.broken} broken by more room`);
+  svg.append("g").selectAll("path").data(US.features).join("path").attr("d", path)
+    .attr("fill", "#141516").attr("stroke", "#2c2b29").attr("stroke-width", 0.8);
+  const order = ["both", "neither", "broken", "fixed"];
+  const dots = svg.append("g").selectAll("circle")
+    .data([...fires].sort((a, b) => order.indexOf(kind(a)) - order.indexOf(kind(b)) || b.n - a.n))
+    .join("circle")
+    .attr("cx", (f) => proj([f.lon, f.lat])[0]).attr("cy", (f) => proj([f.lon, f.lat])[1]).attr("r", (f) => r(f.n))
+    .attr("fill", (f) => KINDS[kind(f)].color).attr("fill-opacity", (f) => (kind(f) === "fixed" ? 0.85 : 0.55))
+    .attr("stroke", "#0a0b0c").attr("stroke-width", 0.6);
+  const tip = $("#tip");
+  dots.on("pointerenter pointermove", (e, f) => {
+    tip.innerHTML = `<b>${f.name}</b>${f.state || "–"} · ${f.year} · ${fmt(f.n)} hot spots<br>2016 rule: ${f.p16} group${f.p16 === 1 ? "" : "s"} ${f.ok16 ? "✓" : "✗"} · more room: ${f.pw} ${f.okw ? "✓" : "✗"}`;
+    tip.style.opacity = 1;
+    const x = Math.min(e.clientX + 14, innerWidth - 270), y = e.clientY + 14;
+    tip.style.left = `${x}px`; tip.style.top = `${y}px`;
+  }).on("pointerleave", () => (tip.style.opacity = 0));
+  $("#legend").innerHTML = ["fixed", "both", "neither", "broken"].map((k) =>
+    `<span data-k="${k}"><i style="background:${KINDS[k].color}"></i><b>${fmt(count[k])}</b>${KINDS[k].label}</span>`).join("");
+  for (const el of document.querySelectorAll(".legend span")) {
+    el.onpointerenter = () => dots.attr("fill-opacity", (f) => (kind(f) === el.dataset.k ? 0.95 : 0.06));
+    el.onpointerleave = () => dots.attr("fill-opacity", (f) => (kind(f) === "fixed" ? 0.85 : 0.55));
+  }
+})();
+
+// ---- four fires ----
+(function four() {
+  const soda = { name: "Soda", state: "Idaho", year: 2015, p16: SODA.events.rule2016, pw: SODA.events.wide,
+    dets: SODA.dets.map(([lon, lat, h, , , a, b]) => [lon, lat, h, a, b]), perimeter: SODA.perimeter };
+  const list = [soda, ...N.examples];
+  const box = $("#fourfires");
+  const panels = list.map((f) => firePanel(f));
+  panels.forEach((p) => box.append(p.el));
+  const fit = () => { const w = box.firstChild.getBoundingClientRect().width; panels.forEach((p) => p.fit(w)); };
+  fit(); addEventListener("resize", fit);
+  const pick = (v, ms) => {
+    $("#t16").setAttribute("aria-pressed", v === 0); $("#tw").setAttribute("aria-pressed", v === 1);
+    panels.forEach((p) => p.set(v, ms));
+  };
+  $("#t16").onclick = () => pick(0, 900);
+  $("#tw").onclick = () => pick(1, 900);
+  // start on the 2016 rule, and merge once the panels are on screen
+  pick(0, 0);
+  new IntersectionObserver((es, io) => {
+    if (es.some((e) => e.isIntersecting)) { io.disconnect(); setTimeout(() => pick(1, 1400), 700); }
+  }, { threshold: 0.5 }).observe(box);
+})();
+
+// ---- regions: one line per region, from the 2016 rule to more room ----
+(function regions() {
+  const rows = [...N.regions.map((r) => ({ name: r.region, a: r.default, b: r.fixed_tuned, n: r.n_fires })),
+    { name: "All 1,431 fires", a: N.overall.default, b: N.overall.fixed_tuned, all: true }];
+  const W = 640, row = 40, H = rows.length * row + 40, x = d3.scaleLinear().domain([0.4, 1]).range([230, W - 50]);
+  let s = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Share counted correctly by region">`;
+  s += `<text x="${x(0.5)}" y="14" text-anchor="middle">50%</text><text x="${x(0.75)}" y="14" text-anchor="middle">75%</text><text x="${x(1)}" y="14" text-anchor="middle">100%</text>`;
+  for (const v of [0.5, 0.75, 1]) s += `<line x1="${x(v)}" x2="${x(v)}" y1="22" y2="${H - 10}" stroke="#1d1e1f"/>`;
+  rows.forEach((r, i) => {
+    const y = 40 + i * row + (r.all ? 10 : 0);
+    s += `<g class="${r.all ? "all" : ""}"><text x="0" y="${y + 5}">${r.name}${r.n ? ` <tspan fill="#5c5852">(${r.n})</tspan>` : ""}</text>
+      <line x1="${x(r.a)}" x2="${x(r.b)}" y1="${y}" y2="${y}" stroke="${r.all ? "#ff6a2b" : "#6d6a64"}" stroke-width="${r.all ? 3 : 2}"/>
+      <circle cx="${x(r.a)}" cy="${y}" r="4.5" fill="#8e8981"/><circle cx="${x(r.b)}" cy="${y}" r="5" fill="#ff6a2b"/>
+      <text class="v" x="${x(r.a) - 10}" y="${y + 6}" text-anchor="end">${pct(r.a)}</text>
+      <text class="v" x="${x(r.b) + 10}" y="${y + 6}">${pct(r.b)}</text></g>`;
+  });
+  s += `<g transform="translate(0, ${H - 4})"><circle cx="236" cy="-4" r="4" fill="#8e8981"/><text x="246" y="0">2016 rule</text><circle cx="336" cy="-4" r="4.5" fill="#ff6a2b"/><text x="346" y="0">more room</text></g></svg>`;
+  $("#regions").innerHTML = s;
+})();
+
+// ---- split and merged, drawn ----
+(function rules() {
+  const sq = (x, y, c) => `<rect x="${x}" y="${y}" width="9" height="9" rx="1.5" fill="${c}"/>`;
+  const outline = (x, w) => `<rect x="${x}" y="6" width="${w}" height="64" rx="26" fill="none" stroke="#f2efe8" stroke-opacity=".35" stroke-dasharray="3 3"/>`;
+  const pal = ["hsl(190,70%,62%)", "hsl(328,55%,70%)", "hsl(105,70%,70%)", "hsl(243,55%,62%)"];
+  let a = outline(40, 140);
+  [[60, 22, 0], [72, 30, 0], [64, 44, 0], [94, 18, 1], [104, 30, 1], [126, 40, 2], [138, 28, 2], [150, 46, 3], [116, 52, 1], [84, 52, 0]]
+    .forEach(([x, y, k]) => (a += sq(x, y, pal[k])));
+  $("#r-split").innerHTML = a;
+  let b = outline(20, 110) + `<rect x="150" y="16" width="56" height="44" rx="18" fill="none" stroke="#f2efe8" stroke-opacity=".35" stroke-dasharray="3 3"/>`;
+  [[40, 24], [54, 36], [70, 26], [86, 40], [100, 30], [62, 50], [96, 52], [160, 28], [176, 36], [170, 46], [186, 24], [140, 36]]
+    .forEach(([x, y]) => (b += sq(x, y, "#ff6a2b")));
+  $("#r-merge").innerHTML = b;
+  const wrong16 = fires.filter((f) => !f.ok16), split16 = wrong16.filter((f) => f.top16 < 0.9).length;
+  $("#splitshare").textContent = `${split16} times out of ${wrong16.length}`;
+  const bad = fires.filter((f) => !f.okw), merged = bad.filter((f) => f.topw >= 0.9).length;
+  $("#costs").innerHTML = `More room fixes <b class="fire">${fmt(count.fixed)}</b> fires, but it breaks <b>${count.broken}</b> that the 2016 rule had right, by joining them to other burning nearby. `
+    + `Of the <b>${bad.length}</b> fires it still gets wrong, <b>${merged}</b> are joined to other burning nearby (another fire, or a burn with no official outline), and ${bad.length - merged} are still split. `
+    + `It also places the start of each fire a little less precisely: about <b>${N.overall.ign_err_km.fixed_tuned} km</b> from the official origin (typical fire), against ${N.overall.ign_err_km.default} km with the 2016 rule.`;
+})();
+
+// ---- every fire ----
+(function table() {
+  $("#nf").textContent = fmt(fires.length);
+  const cell = (p, ok) => `${p} <span class="${ok ? "ok" : "no"}">${ok ? "✓" : "✗"}</span>`;
+  let shown = 60, q = "";
+  const ex = new Set(N.examples.map((e) => e.uid));
+  function render() {
+    const words = q.toLowerCase().split(/\s+/).filter(Boolean);
+    const hit = fires.filter((f) => words.every((w) => `${f.name} ${f.state} ${f.year}`.toLowerCase().includes(w)));
+    $("#rows").innerHTML = hit.slice(0, shown).map((f) => `<tr class="${kind(f) === "fixed" ? "hl" : ""}"${ex.has(f.uid) ? ' data-ex="1"' : ""}>
+      <td>${f.name}</td><td>${f.state || "–"}</td><td class="n">${f.year}</td><td class="n">${fmt(f.n)}</td>
+      <td class="n">${cell(f.p16, f.ok16)}</td><td class="n ${kind(f) === "fixed" ? "fixed" : ""}">${cell(f.pw, f.okw)}</td></tr>`).join("");
+    $("#qn").textContent = q ? `${fmt(hit.length)} fires · ${pct(hit.filter((f) => f.ok16).length / (hit.length || 1))} → ${pct(hit.filter((f) => f.okw).length / (hit.length || 1))} correct` : "";
+    const b = $("#all");
+    b.hidden = hit.length <= shown;
+    b.textContent = `Show all ${fmt(hit.length)}`;
+  }
+  $("#q").addEventListener("input", (e) => { q = e.target.value; shown = 60; render(); });
+  $("#all").onclick = () => { shown = Infinity; render(); };
+  render();
+})();
+
+// arriving at an anchor (#fires, #table): go there once everything has been drawn
+if (location.hash) document.querySelector(location.hash)?.scrollIntoView();
+</script>
+</body>
+</html>

@@ -1,0 +1,834 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 16 16%22%3E%3Crect width=%2216%22 height=%2216%22 rx=%223%22 fill=%22%230a0b0c%22/%3E%3Ccircle cx=%228%22 cy=%228%22 r=%223.2%22 fill=%22%23ff6a2b%22/%3E%3C/svg%3E">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Fire stories</title>
+<meta name="description" content="An interactive prototype for grouping satellite fire detections into fire events: how the answer changes with the space-time window, how far automatic grouping gets on five years of US data, and how a person can help during and after a fire.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@112,600;112,800&family=IBM+Plex+Mono:wght@400;500&family=Public+Sans:ital,wght@0,400;0,600;1,400&display=swap">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/maplibre-gl@4.7.1/dist/maplibre-gl.css">
+<style>
+/* An instrument console: a slim control rail, the map as the working surface, and full pages for
+   results and background. UI chrome is ink and teal; fire colours are kept for the data. */
+:root {
+  --paper: #e9edf0;
+  --panel: #f7f9fa;
+  --raised: #ffffff;
+  --ink: #142029;
+  --muted: #56636e;
+  --line: #c9d1d7;
+  --accent: #0d6c77;
+  --accent-ink: #ffffff;
+  --accent-soft: #d5e9eb;
+  --truth: #2156a3;
+  --good: #2f7d4f;
+  --warn: #b5541c;
+  --fire: #d9480f;
+  --flag: #b98900;
+  --chip: #dde4e8;
+  --shadow: 0 1px 2px rgba(20, 32, 41, .08), 0 6px 20px rgba(20, 32, 41, .10);
+  --f-display: "Archivo", "Helvetica Neue", Arial, sans-serif;
+  --f-body: "Public Sans", "Helvetica Neue", Arial, sans-serif;
+  --f-mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+  --rail: 340px;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper: #0d1418; --panel: #131c22; --raised: #1a252c; --ink: #e2e8ec; --muted: #93a2ad; --line: #26333c;
+    --accent: #52b8c4; --accent-ink: #062a2f; --accent-soft: #163a40; --truth: #8fb8f2; --good: #63bf86; --warn: #f0965e;
+    --fire: #ff8a5c; --flag: #e8c04a; --chip: #1d2830; --shadow: 0 1px 2px rgba(0, 0, 0, .4), 0 6px 20px rgba(0, 0, 0, .35);
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --paper: #0d1418; --panel: #131c22; --raised: #1a252c; --ink: #e2e8ec; --muted: #93a2ad; --line: #26333c;
+  --accent: #52b8c4; --accent-ink: #062a2f; --accent-soft: #163a40; --truth: #8fb8f2; --good: #63bf86; --warn: #f0965e;
+  --fire: #ff8a5c; --flag: #e8c04a; --chip: #1d2830; --shadow: 0 1px 2px rgba(0, 0, 0, .4), 0 6px 20px rgba(0, 0, 0, .35);
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+/* only Fire stories is offered here; the rest of the old prototype stays in the code but out of sight */
+nav.tabs { visibility: hidden; }
+#help, #intro { display: none !important; }
+[hidden] { display: none !important; }
+html, body { height: 100%; }
+body {
+  margin: 0; background: var(--paper); color: var(--ink);
+  font: 14px/1.5 var(--f-body);
+  display: grid; grid-template-rows: auto 1fr;
+}
+h1, h2, h3 { font-family: var(--f-display); font-stretch: 112%; text-wrap: balance; margin: 0; }
+p { margin: 0; }
+a { color: var(--accent); }
+button, select, input, textarea { font: inherit; color: inherit; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.mono, .num { font-family: var(--f-mono); font-variant-numeric: tabular-nums; }
+.eyebrow { font: 500 11px/1.2 var(--f-mono); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+
+/* header */
+header.top {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 8px 20px;
+  padding: 8px 16px; background: var(--panel); border-bottom: 1px solid var(--line);
+  padding-top: calc(8px + env(safe-area-inset-top, 0px));
+}
+.brand { display: flex; align-items: baseline; gap: 12px; min-width: 0; }
+.brand h1 { font-size: 18px; font-weight: 800; letter-spacing: -.01em; white-space: nowrap; }
+.brand .eyebrow { white-space: nowrap; }
+nav.tabs { display: flex; gap: 2px; overflow-x: auto; margin-left: auto; scrollbar-width: none; }
+nav.tabs button {
+  border: 0; background: none; padding: 7px 12px; border-radius: 6px; cursor: pointer;
+  color: var(--muted); font-weight: 600; white-space: nowrap;
+}
+nav.tabs button:hover { color: var(--ink); background: var(--chip); }
+nav.tabs button[aria-selected="true"] { color: var(--ink); background: var(--chip); box-shadow: inset 0 -2px 0 var(--accent); }
+.helpbtn { border: 1px solid var(--line); background: none; width: 30px; height: 30px; border-radius: 50%; cursor: pointer; font-weight: 700; color: var(--muted); flex: none; }
+.helpbtn:hover { color: var(--ink); border-color: var(--accent); }
+
+/* main split: rail + map, or a full page */
+main { display: grid; grid-template-columns: var(--rail) minmax(0, 1fr); min-height: 0; }
+main.is-page { grid-template-columns: minmax(0, 1fr); }
+main.is-page > .rail, main.is-page > .stage { display: none; }
+main:not(.is-page) > .page { display: none; }
+.rail { background: var(--panel); border-right: 1px solid var(--line); overflow-y: auto; min-height: 0; }
+.rail section { display: grid; }
+.block { display: grid; gap: 10px; padding: 16px; border-bottom: 1px solid var(--line); }
+.block:last-child { border-bottom: 0; }
+.rail h2 { font-size: 17px; font-weight: 800; }
+.rail h3, .h3 { font-size: 13px; font-weight: 600; font-stretch: 100%; font-family: var(--f-body); display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+.hint { font: 500 11px var(--f-mono); color: var(--accent); font-weight: 500; }
+.lede { color: var(--muted); font-size: 13.5px; }
+#region-blurb { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; cursor: pointer; }
+#region-blurb.open { display: block; }
+.stage { position: relative; min-height: 0; min-width: 0; overflow: hidden; }
+#map { position: absolute; inset: 0; }
+
+/* controls */
+select.region {
+  width: 100%; padding: 8px 10px; border: 1px solid var(--line); border-radius: 6px; background: var(--paper);
+  font-weight: 600;
+}
+.slider { display: grid; gap: 2px; }
+.slider .row { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+.slider label { font-weight: 600; font-size: 13px; }
+.slider output { font: 500 15px var(--f-mono); }
+.slider input[type=range] { width: 100%; accent-color: var(--accent); margin: 0; }
+.ticks { position: relative; height: 13px; margin: 0 8px; }
+.ticks span { position: absolute; transform: translateX(-50%); top: 0; font: 9.5px/1 var(--f-mono); color: var(--muted); white-space: nowrap; }
+.ticks span.mark { color: var(--ink); font-weight: 500; text-decoration: underline dashed; text-underline-offset: 2px; }
+.presets { display: flex; flex-wrap: wrap; gap: 6px; }
+.gw-cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 16px; }
+.gw { display: grid; gap: 10px; align-content: start; }
+.gw ul { margin: 0; padding-left: 18px; display: grid; gap: 8px; font-size: 14px; line-height: 1.5; }
+.gw li b { color: var(--ink); }
+.gw .presets { margin-top: 4px; }
+.rule-sentence { font-size: 15px; line-height: 1.55; }
+.rule-sentence output { font: 600 14px var(--f-mono); color: var(--accent); background: var(--accent-soft); padding: 1px 6px; border-radius: 5px; white-space: nowrap; }
+.score .out-of { font-size: 13px; color: var(--muted); }
+.verdict { font-size: 13.5px; line-height: 1.5; }
+.verdict b { color: var(--ink); }
+.btn {
+  border: 1px solid var(--line); background: var(--paper); border-radius: 999px; padding: 5px 11px;
+  cursor: pointer; font-size: 12.5px; font-weight: 600;
+}
+.btn:hover { border-color: var(--accent); }
+.btn.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+.btn.big { padding: 10px 18px; font-size: 14px; border-radius: 8px; }
+.btn[disabled] { opacity: .45; cursor: not-allowed; }
+.btn[aria-pressed="true"] { background: var(--accent-soft); border-color: var(--accent); }
+.toggles { display: grid; gap: 6px; }
+.toggles label { display: flex; align-items: center; gap: 8px; font-size: 13px; cursor: pointer; }
+.toggles input { accent-color: var(--accent); }
+.seg { display: inline-flex; border: 1px solid var(--line); border-radius: 7px; overflow: hidden; background: var(--panel); }
+.seg button { border: 0; background: none; padding: 6px 11px; font-size: 12.5px; font-weight: 600; cursor: pointer; color: var(--muted); }
+.seg button + button { border-left: 1px solid var(--line); }
+.seg button:hover { color: var(--ink); }
+.seg button[aria-pressed="true"] { background: var(--ink); color: var(--panel); }
+.seg.small button { padding: 3px 8px; font-size: 11.5px; }
+
+/* score */
+.score { display: grid; gap: 8px; }
+.score .big { display: flex; align-items: baseline; gap: 10px; }
+.score .big b { font: 500 34px/1 var(--f-mono); font-variant-numeric: tabular-nums; letter-spacing: -.02em; }
+.score .big span { color: var(--muted); font-size: 13px; line-height: 1.3; }
+.scorebar { position: relative; height: 34px; margin: 2px 6px 0; }
+.scorebar .track { position: absolute; left: 0; right: 0; top: 6px; height: 8px; border-radius: 4px; background: var(--chip); }
+.scorebar .fill { position: absolute; left: 0; top: 6px; height: 8px; border-radius: 4px; background: var(--accent); transition: width .25s ease; }
+.scorebar .mk { position: absolute; top: 0; transform: translateX(-50%); display: grid; justify-items: center; gap: 2px; font: 10px/1 var(--f-mono); color: var(--muted); white-space: nowrap; }
+.scorebar .mk i { display: block; width: 2px; height: 20px; background: var(--ink); }
+.scorebar .mk.default i { background: none; border-left: 2px dashed var(--ink); width: 0; }
+.scorebar .mk.best i { background: var(--warn); }
+/* "best" sits above the bar and "2016 rule" below, so the two never collide when the scores are close */
+.scorebar { margin-top: 14px; }
+.scorebar .mk.best { top: -14px; }
+.scorebar .mk.best i { order: 2; }
+.facts { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 12.5px; color: var(--muted); }
+.facts b { color: var(--ink); font: 500 13px var(--f-mono); }
+
+/* readouts */
+.readout { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1px; background: var(--line); border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+.readout div { background: var(--panel); padding: 8px 10px; display: grid; gap: 2px; min-width: 0; }
+.readout b { font: 500 17px/1.15 var(--f-mono); font-variant-numeric: tabular-nums; }
+.readout small { color: var(--muted); font-size: 11.5px; line-height: 1.3; }
+.readout .wide { grid-column: span 2; }
+.stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; }
+.stats div { display: grid; gap: 1px; padding: 6px 8px; border-radius: 6px; background: var(--paper); min-width: 0; }
+.stats b { font: 500 18px/1.1 var(--f-mono); font-variant-numeric: tabular-nums; }
+.stats small { color: var(--muted); font-size: 10.5px; line-height: 1.25; }
+.stats .flagged b { color: var(--flag); }
+.pill { display: inline-block; font: 500 11px/1 var(--f-mono); padding: 3px 6px; border-radius: 4px; background: var(--chip); }
+.pill.good { color: var(--good); }
+.pill.warn { color: var(--warn); }
+.pill.flag { color: var(--flag); }
+.note { font-size: 12.5px; color: var(--muted); }
+.callout { border-left: 3px solid var(--accent); padding: 6px 0 6px 12px; font-size: 13.5px; }
+blockquote { margin: 0; padding: 0 0 0 12px; border-left: 2px solid var(--line); font-style: italic; color: var(--ink); }
+blockquote cite { display: block; font-style: normal; font-size: 12px; color: var(--muted); margin-top: 4px; }
+details.more summary { cursor: pointer; font-weight: 600; font-size: 13px; list-style: none; display: flex; justify-content: space-between; }
+details.more summary::-webkit-details-marker { display: none; }
+details.more summary::after { content: "+"; font: 500 15px var(--f-mono); color: var(--muted); }
+details.more[open] summary::after { content: "–"; }
+details.more > :not(summary) { margin-top: 10px; }
+.kv { display: grid; grid-template-columns: auto 1fr; gap: 3px 12px; font-size: 12.5px; margin: 0; }
+.kv dt { color: var(--muted); }
+.kv dd { margin: 0; font-family: var(--f-mono); font-variant-numeric: tabular-nums; text-align: right; }
+
+/* charts */
+.chart { width: 100%; overflow-x: auto; }
+.chart > svg { display: block; width: 100%; height: auto; }
+.chart text { fill: var(--muted); font: 10px var(--f-mono); }
+.chart .title { fill: var(--ink); font: 600 11px var(--f-body); }
+.chart .cellv { fill: var(--ink); font: 9px var(--f-mono); }
+.chart rect.pick { cursor: pointer; transition: fill-opacity .1s; }
+.chart rect.pick:hover { stroke: var(--ink); stroke-width: 1.2; }
+
+/* map overlays */
+.mapbar { position: absolute; top: 12px; left: 12px; display: flex; flex-wrap: wrap; gap: 8px; align-items: flex-start; z-index: 3; max-width: calc(100% - 24px); }
+.mapbar > * { box-shadow: var(--shadow); }
+.mapbtn { border: 1px solid var(--line); background: var(--panel); border-radius: 7px; padding: 6px 11px; font-size: 12.5px; font-weight: 600; cursor: pointer; }
+.mapbtn[aria-expanded="true"] { background: var(--ink); color: var(--panel); }
+.layers-wrap { position: relative; box-shadow: none; }
+.layers-wrap > .mapbtn { box-shadow: var(--shadow); }
+.pop { position: absolute; top: calc(100% + 6px); left: 0; background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; box-shadow: var(--shadow); min-width: 210px; display: grid; gap: 8px; }
+.legend {
+  position: absolute; left: 12px; bottom: 26px; z-index: 2; background: var(--panel); border: 1px solid var(--line);
+  border-radius: 8px; padding: 8px 10px; display: grid; gap: 7px; font-size: 12px; box-shadow: var(--shadow);
+  max-width: min(360px, calc(100% - 24px));
+}
+.legend.top { top: 12px; bottom: auto; }
+.legend.under { top: 58px; bottom: auto; max-width: min(330px, calc(100% - 24px)); }
+.key-toggle summary { cursor: pointer; list-style: none; }
+.key-toggle summary::-webkit-details-marker { display: none; }
+.key-toggle summary::after { content: " –"; }
+.key-toggle:not([open]) summary::after { content: " +"; }
+.key-toggle .keybody { display: grid; gap: 6px; margin-top: 6px; }
+.mapcard { position: absolute; top: 12px; right: 12px; z-index: 2; width: min(360px, calc(100% - 24px)); background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; box-shadow: var(--shadow); font-size: 12.5px; }
+.mapcard:not([open]) { width: auto; }
+.mapcard-body { display: grid; gap: 10px; margin-top: 8px; max-height: calc(100vh - 300px); overflow-y: auto; padding-right: 4px; }
+.mapcard .mc-title { font-size: 16px; font-weight: 800; }
+.legend .head { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.legend .ramp { height: 8px; border-radius: 2px; }
+.legend .ends { display: flex; justify-content: space-between; gap: 16px; font: 10.5px var(--f-mono); color: var(--muted); }
+.legend .keys { display: flex; flex-wrap: wrap; gap: 4px 12px; }
+.legend .key { display: flex; align-items: center; gap: 5px; }
+.legend .sw { width: 12px; height: 12px; flex: none; }
+.timebar {
+  position: absolute; left: 50%; transform: translateX(-50%); bottom: 26px; z-index: 2; background: var(--panel); border: 1px solid var(--line);
+  border-radius: 8px; padding: 6px 10px; display: flex; align-items: center; gap: 10px; box-shadow: var(--shadow);
+  width: min(360px, calc(100% - 420px));
+}
+.timebar input { flex: 1; accent-color: var(--accent); min-width: 0; }
+.timebar output { font: 500 12px var(--f-mono); white-space: nowrap; }
+.iconbtn { border: 1px solid var(--line); background: var(--paper); width: 30px; height: 30px; border-radius: 6px; cursor: pointer; flex: none; display: grid; place-items: center; font-size: 16px; line-height: 1; }
+.busy { position: absolute; top: 56px; left: 50%; transform: translateX(-50%); z-index: 5; background: var(--ink); color: var(--panel); padding: 6px 12px; border-radius: 999px; font-size: 12px; }
+.maplibregl-ctrl-attrib { font-size: 10px; }
+.maplibregl-ctrl-bottom-right { bottom: 0; }
+.maplibregl-popup-content { background: var(--panel); color: var(--ink); font: 12.5px/1.45 var(--f-body); border-radius: 8px; box-shadow: var(--shadow); padding: 10px 12px; }
+.maplibregl-popup-tip { border-top-color: var(--panel) !important; border-bottom-color: var(--panel) !important; }
+.maplibregl-popup-close-button { font-size: 16px; padding: 0 6px; color: var(--muted); }
+
+/* inspector: a card floating on the map */
+.inspector {
+  position: absolute; top: 12px; right: 12px; z-index: 4; width: 340px; max-width: calc(100% - 24px);
+  max-height: calc(100% - 120px); display: grid; grid-template-rows: auto minmax(0, 1fr);
+  background: var(--panel); border: 1px solid var(--line); border-radius: 10px; box-shadow: var(--shadow);
+}
+.inspector header { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; padding: 12px 12px 8px 14px; border-bottom: 1px solid var(--line); }
+.inspector h3 { font-size: 16px; font-weight: 800; display: flex; align-items: center; gap: 8px; }
+.insp-body { overflow-y: auto; padding: 10px 14px 14px; display: grid; gap: 10px; align-content: start; grid-auto-rows: max-content; }
+.insp-body ul { margin: 0; padding-left: 16px; display: grid; gap: 4px; font-size: 12.5px; }
+.tip {
+  position: absolute; top: 0; left: 0; z-index: 6; pointer-events: none; background: var(--ink); color: var(--panel);
+  font-size: 12px; line-height: 1.4; padding: 6px 9px; border-radius: 6px; max-width: 260px; box-shadow: var(--shadow);
+}
+.tip b { font-weight: 600; }
+.tip .dim { opacity: .75; }
+
+/* intro */
+.intro { position: fixed; inset: 0; z-index: 30; display: grid; place-items: center; padding: 16px; background: color-mix(in srgb, var(--paper) 55%, transparent); backdrop-filter: blur(2px); }
+.intro .card { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; box-shadow: var(--shadow); padding: 22px 22px 18px; max-width: 520px; display: grid; gap: 14px; }
+.intro h2 { font-size: 22px; font-weight: 800; }
+.steps { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; counter-reset: s; }
+.steps button {
+  width: 100%; text-align: left; border: 1px solid var(--line); background: var(--paper); border-radius: 8px; padding: 10px 12px 10px 44px;
+  cursor: pointer; position: relative; display: grid; gap: 2px; counter-increment: s;
+}
+.steps button::before { content: counter(s); position: absolute; left: 12px; top: 10px; width: 22px; height: 22px; border-radius: 50%; background: var(--accent); color: var(--accent-ink); font: 600 12px/22px var(--f-mono); text-align: center; }
+.steps button:hover { border-color: var(--accent); }
+.steps b { font-size: 14px; }
+.steps span { color: var(--muted); font-size: 12.5px; }
+
+/* replay */
+.clock { font: 800 21px/1.2 var(--f-display); font-stretch: 112%; }
+.transport { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+#rp-speed { padding: 5px 8px; }
+.rp-timeline {
+  position: absolute; left: 12px; right: 60px; bottom: 26px; z-index: 2; background: var(--panel); border: 1px solid var(--line);
+  border-radius: 8px; padding: 8px 12px 6px; box-shadow: var(--shadow); display: grid; gap: 2px; max-width: 760px; margin: 0 auto;
+}
+.rp-timeline .hist { height: 34px; position: relative; }
+.rp-timeline .hist svg { display: block; width: 100%; height: 100%; }
+.rp-timeline input { width: 100%; margin: 0; accent-color: var(--accent); }
+.rp-timeline .ends { display: flex; justify-content: space-between; font: 10.5px var(--f-mono); color: var(--muted); }
+.flag-item { display: grid; gap: 6px; padding: 9px 10px; border: 1px solid var(--line); border-left: 3px solid var(--flag); border-radius: 6px; background: var(--paper); font-size: 12.5px; }
+.flag-item .where { cursor: pointer; }
+.flag-item .where:hover { text-decoration: underline; }
+.rows { display: grid; gap: 0; }
+.row-item { display: grid; grid-template-columns: 1fr auto; gap: 2px 10px; padding: 7px 0; border-top: 1px solid var(--line); font-size: 12.5px; align-items: baseline; }
+.row-item:first-child { border-top: 0; }
+.row-item small { color: var(--muted); grid-column: span 2; }
+.row-item.clickable { cursor: pointer; }
+.row-item.clickable:hover { background: var(--chip); }
+.row-item.sel { box-shadow: inset 3px 0 0 var(--accent); padding-left: 8px; }
+.sw-dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 6px; vertical-align: -1px; flex: none; }
+.range { position: relative; height: 26px; margin: 4px 4px 0; }
+.range .track { position: absolute; left: 0; right: 0; top: 9px; height: 8px; border-radius: 4px; background: var(--chip); }
+.range .iqr { position: absolute; top: 9px; height: 8px; border-radius: 4px; background: var(--accent); opacity: .55; }
+.range .med { position: absolute; top: 4px; width: 3px; height: 18px; background: var(--ink); transform: translateX(-50%); border-radius: 1px; }
+.range .dot { position: absolute; top: 10px; width: 6px; height: 6px; border-radius: 50%; background: var(--muted); transform: translateX(-50%); opacity: .8; }
+.range .truth { position: absolute; top: 2px; transform: translateX(-50%); font: 600 10px var(--f-mono); color: var(--truth); }
+.range-ends { display: flex; justify-content: space-between; font: 10px var(--f-mono); color: var(--muted); }
+
+
+/* fire stories */
+.windcanvas { position: absolute; inset: 0; z-index: 1; pointer-events: none; }
+.st-player { max-width: 820px; }
+@media (min-width: 861px) { .stage:has(#inspector:not([hidden])) :is(.st-player, .st-swipe) { right: 372px; margin: 0; } }
+.hud { display: grid; gap: 6px; font-size: 13px; }
+.hud-ctl { display: flex; gap: 6px; }
+.hud-wind { display: flex; align-items: flex-start; gap: 6px; color: var(--muted); font-size: 12.5px; }
+.hud-wind svg { flex: none; margin-top: 1px; }
+.hud-time { display: flex; align-items: center; gap: 8px; font: 600 17px/1.2 var(--f-display); font-stretch: 112%; }
+.hud-sun { font-size: 15px; color: var(--flag); width: 16px; text-align: center; }
+.hud-line { display: flex; align-items: center; gap: 6px; color: var(--muted); font-size: 12.5px; }
+.hud-line b { color: var(--ink); font-family: var(--f-mono); font-weight: 500; }
+.hud-area { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; margin-top: 2px; }
+.hud-area b { font: 500 15px var(--f-mono); color: var(--fire); }
+.hud-grow { display: flex; align-items: center; gap: 8px; font-size: 13.5px; margin-top: 2px; }
+.hud-grow b { color: var(--ink); }
+.hud-bar { height: 5px; border-radius: 3px; background: var(--chip); overflow: hidden; }
+.hud-bar i { display: block; height: 100%; background: var(--fire); transition: width .15s linear; }
+.st-player .hist rect.day { cursor: pointer; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chips button { border: 1px solid var(--line); background: var(--paper); border-radius: 999px; padding: 4px 10px; font-size: 12px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; }
+.chips button i { width: 9px; height: 9px; border-radius: 50%; display: inline-block; }
+.chips button span { font: 500 11px var(--f-mono); color: var(--muted); }
+.chips button[aria-pressed="true"] { background: var(--accent-soft); border-color: var(--accent); }
+.fire-row .verdict { display: flex; align-items: center; gap: 6px; }
+.fire-row .glyphs { display: inline-flex; gap: 2px; }
+.glyph-key svg { vertical-align: -2px; }
+.days { display: grid; font-size: 12.5px; }
+.day-row { display: grid; grid-template-columns: 56px 40px 44px 1fr 1fr; gap: 6px; align-items: center; padding: 4px 6px; border-top: 1px solid var(--line); cursor: pointer; }
+.day-row svg { vertical-align: -3px; }
+.day-row.head { cursor: default; color: var(--muted); font: 500 10.5px var(--f-mono); text-transform: uppercase; letter-spacing: .05em; border-top: 0; }
+.day-row:not(.head):hover, .day-row.sel { background: var(--chip); }
+
+.phase { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
+.phase button { border: 1.5px solid var(--line); background: var(--paper); border-radius: 8px; padding: 8px 6px; cursor: pointer; display: grid; gap: 1px; text-align: center; }
+.phase button b { font-size: 14px; }
+.phase button small { color: var(--muted); font-size: 11px; }
+.phase button[aria-pressed="true"] { border-color: var(--accent); background: var(--accent-soft); box-shadow: inset 0 0 0 1px var(--accent); }
+.st-swipe { max-width: 560px; }
+.past-row { display: grid; grid-template-columns: 1fr auto; gap: 2px 10px; padding: 5px 0; border-top: 1px solid var(--line); font-size: 12.5px; }
+.minichart svg { display: block; width: 100%; height: auto; }
+.minichart text { fill: var(--muted); font: 10px var(--f-mono); }
+
+/* study */
+.trial-q { font: 800 20px/1.2 var(--f-display); font-stretch: 112%; }
+.choice { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.choice button {
+  border: 1.5px solid var(--line); background: var(--paper); border-radius: 10px; padding: 14px 10px; cursor: pointer;
+  font-weight: 600; display: grid; gap: 2px; text-align: center;
+}
+.choice button small { color: var(--muted); font-weight: 400; font-size: 12px; }
+.choice button[aria-pressed="true"] { border-color: var(--accent); background: var(--chip); box-shadow: inset 0 0 0 1px var(--accent); }
+.conf { display: flex; justify-content: space-between; gap: 4px; }
+.conf label { flex: 1; text-align: center; border: 1px solid var(--line); border-radius: 6px; padding: 5px 0; cursor: pointer; font: 500 13px var(--f-mono); }
+.conf input { position: absolute; opacity: 0; pointer-events: none; }
+.conf input:checked + span { color: var(--accent); }
+.conf label:has(input:checked) { border-color: var(--accent); background: var(--chip); }
+.conf label:has(input:focus-visible) { outline: 2px solid var(--accent); }
+textarea { width: 100%; min-height: 64px; resize: vertical; border: 1px solid var(--line); border-radius: 6px; padding: 8px; background: var(--paper); }
+.progress { height: 4px; background: var(--chip); border-radius: 2px; overflow: hidden; }
+.progress i { display: block; height: 100%; background: var(--accent); }
+.viewtag { display: inline-flex; align-items: center; gap: 6px; font: 500 12px var(--f-mono); padding: 4px 8px; border-radius: 4px; background: var(--ink); color: var(--panel); }
+.reveal { display: grid; gap: 6px; }
+.reveal .item { display: grid; grid-template-columns: 1fr auto; gap: 2px 10px; padding: 8px 0; border-top: 1px solid var(--line); font-size: 12.5px; }
+.reveal .item small { color: var(--muted); grid-column: span 2; }
+
+/* the result page */
+.page-inner.result { max-width: 900px; }
+.climb { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+.climb li { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 16px; display: grid; gap: 8px; align-content: start; min-width: 0; }
+.climb li.hl { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
+.climb .pct { font: 500 48px/1 var(--f-mono); font-variant-numeric: tabular-nums; letter-spacing: -.02em; }
+.climb li.hl .pct { color: var(--accent); }
+.climb .bar { height: 8px; border-radius: 4px; background: var(--chip); overflow: hidden; }
+.climb .bar i { display: block; height: 100%; background: var(--muted); }
+.climb li.hl .bar i { background: var(--accent); }
+.climb .t { font-weight: 600; font-size: 14px; }
+.climb small { color: var(--muted); font-size: 12.5px; line-height: 1.45; }
+.why p { font-size: 14.5px; max-width: 68ch; }
+@media (max-width: 860px) { .climb { grid-template-columns: minmax(0, 1fr); } }
+
+/* full pages: results and about */
+.page { overflow-y: auto; min-height: 0; padding-inline: 16px; }
+.page-inner { max-width: 1080px; margin: 0 auto; padding-block: 28px 56px; display: grid; gap: 22px; }
+.page-head { display: grid; gap: 8px; max-width: 80ch; }
+.page-head h2 { font-size: clamp(24px, 3vw, 32px); font-weight: 800; letter-spacing: -.01em; }
+.page-head .lede { font-size: 15px; }
+.tiles { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 10px; }
+.tile { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; display: grid; gap: 4px; align-content: start; text-align: left; }
+.tile b { font: 500 30px/1 var(--f-mono); font-variant-numeric: tabular-nums; letter-spacing: -.02em; }
+.tile .t { font-weight: 600; font-size: 13px; }
+.tile small { color: var(--muted); font-size: 12px; line-height: 1.35; }
+.tiles3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.panel .chart.wide { max-width: 760px; }
+.about-wrap { border-top: 1px solid var(--line); margin-top: 28px; }
+.prose.about { padding-block: 28px 0; margin: 0; }
+.tile.hl { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
+button.tile { cursor: pointer; font: inherit; color: inherit; }
+button.tile:hover { border-color: var(--accent); }
+button.tile .go { color: var(--accent); font: 500 11px var(--f-mono); margin-top: 4px; }
+.grid2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+.panel { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 16px 18px; display: grid; gap: 10px; align-content: start; min-width: 0; }
+.panel h3 { font-size: 15px; font-weight: 800; }
+.panel .chart { max-width: 470px; }
+.prose { display: grid; gap: 12px; font-size: 15px; max-width: 68ch; margin: 0 auto; padding-block: 28px 56px; }
+.prose h2 { font-size: 28px; font-weight: 800; }
+.prose h3 { font-size: 16px; margin-top: 8px; }
+.prose ul { margin: 0; padding-left: 18px; display: grid; gap: 4px; }
+.refs { font-size: 12.5px; color: var(--muted); }
+.refs li { margin-bottom: 4px; }
+
+@media (max-width: 1100px) {
+  .tiles { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .timebar { width: min(300px, calc(100% - 24px)); left: auto; right: 60px; transform: none; bottom: 92px; }
+}
+@media (max-width: 860px) {
+  :root { --rail: 1fr; }
+  body { grid-template-rows: auto auto; height: auto; }
+  main { grid-template-columns: minmax(0, 1fr); grid-template-rows: 62vh auto; }
+  main.is-page { grid-template-rows: auto; }
+  .stage { order: -1; }
+  .rail { border-right: 0; border-top: 1px solid var(--line); overflow: visible; }
+  nav.tabs { margin-left: 0; min-width: 0; flex: 1; }
+  header.top { display: flex; flex-wrap: wrap; }
+  .brand { flex-wrap: wrap; row-gap: 2px; width: 100%; }
+  .brand h1 { white-space: normal; }
+  .timebar { left: 12px; right: 56px; width: auto; bottom: 12px; transform: none; }
+  .legend { bottom: 64px; }
+  .inspector { top: auto; bottom: 0; right: 0; left: 0; width: auto; max-width: none; max-height: 55%; border-radius: 12px 12px 0 0; }
+  .rp-timeline { left: 8px; right: 8px; bottom: 8px; }
+  .grid2 { grid-template-columns: minmax(0, 1fr); }
+  .tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .page { overflow: visible; }
+}
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="brand">
+    <h1>Fire stories</h1>
+    <a class="eyebrow" href="index.html" style="text-decoration:none">← 705 km to 1.6 m</a>
+  </div>
+  <nav class="tabs" role="tablist" aria-label="Sections">
+    <button role="tab" data-tab="result" aria-selected="true">The result</button>
+    <button role="tab" data-tab="stories" aria-selected="false">Fire stories</button>
+    <button role="tab" data-tab="replay" aria-selected="false">Live replay</button>
+    <button role="tab" data-tab="results" aria-selected="false">Details</button>
+  </nav>
+  <button class="helpbtn" id="help" aria-label="How to use this" title="How to use this">?</button>
+</header>
+
+<main id="main" class="is-page">
+  <aside class="rail" id="rail">
+    <!-- EXPLORE -->
+    <section data-panel="explore" hidden>
+      <div class="block" style="padding-bottom:0;border-bottom:0"><button class="btn" id="explore-back">← Back</button></div>
+      <div class="block">
+        <span class="eyebrow">The 2016 rule, on the map</span>
+        <h2>Is this one fire, or many?</h2>
+        <p class="lede">Each dot is a satellite detection. Move the sliders and watch the dots regroup into fires. Dashed lines are the official fire maps.</p>
+      </div>
+      <div class="block">
+        <label class="eyebrow" for="region">1 · Region</label>
+        <select id="region" class="region"></select>
+        <div hidden><p class="note" id="region-blurb"></p><select id="fire-jump" class="region" aria-label="Zoom to an official fire"></select></div>
+      </div>
+      <div class="block">
+        <span class="eyebrow">2 · The rule</span>
+        <p class="rule-sentence">Two dots are the <b>same fire</b> if they are within <output id="d-out" class="num"></output> and <output id="T-out" class="num"></output> of each other.</p>
+        <div class="slider">
+          <div class="row"><label for="d">How far apart</label></div>
+          <input type="range" id="d" min="0" max="8" step="1">
+          <div class="ticks" id="d-ticks"></div>
+        </div>
+        <div class="slider">
+          <div class="row"><label for="T">How long apart</label></div>
+          <input type="range" id="T" min="0" max="7" step="1">
+          <div class="ticks" id="T-ticks"></div>
+        </div>
+        <div class="presets" id="presets">
+          <button class="btn" data-preset="default" title="Same or next-door 1 km square within 4 days (Cattau et al. 2016)">2016 rule</button>
+          <button class="btn" data-preset="best">Best rule for this region</button>
+        </div>
+      </div>
+      <div class="block score" id="score"></div>
+      <div class="block" hidden>
+        <details class="more" id="grid-more">
+          <summary><span id="grid-title">Compare every rule at once</span></summary>
+          <div class="chart" id="grid"></div>
+          <div id="grid-legend"></div>
+          <p class="note" id="grid-caption"></p>
+        </details>
+      </div>
+      <div class="block" hidden>
+        <details class="more">
+          <summary>More numbers</summary>
+          <div class="facts" id="explore-facts"></div>
+          <div class="readout" id="explore-readout"></div>
+          <p class="note" id="explore-note"></p>
+        </details>
+      </div>
+      <div class="block">
+        <p class="note">Be the person: look at 12 real clusters and decide, one fire or several?</p>
+        <div><button class="btn" id="go-study">Try it →</button></div>
+      </div>
+    </section>
+
+    <!-- FIRE STORIES -->
+    <section data-panel="stories" hidden>
+      <div class="block">
+        <span class="eyebrow">One fire at a time</span>
+        <h2>One fire, before, during and after</h2>
+        <p class="lede">Pick a fire, then a moment. <b>Before</b>: how dry it was. <b>During</b>: watch it burn, with the real wind. <b>After</b>: the scar it left.</p>
+        <label class="eyebrow" for="st-region">1 · Region</label>
+        <select id="st-region" class="region" aria-label="Region"></select>
+        <label class="eyebrow" for="st-fire">2 · Fire</label>
+        <select id="st-fire" class="region"><option>Loading fires…</option></select>
+      </div>
+      <div class="block">
+        <span class="eyebrow">3 · When</span>
+        <div class="phase" id="st-phase" role="group" aria-label="Phase">
+          <button data-p="before" aria-pressed="false"><b>Before</b><small>danger, history</small></button>
+          <button data-p="during" aria-pressed="true"><b>During</b><small>spread, wind</small></button>
+          <button data-p="after" aria-pressed="false"><b>After</b><small>scar, recovery</small></button>
+        </div>
+      </div>
+      <div class="block hud" id="st-now" hidden>
+        <div class="hud-ctl"><button class="btn primary" id="st-pp">Pause</button><button class="btn" id="st-restart">Restart</button></div>
+        <div class="hud" id="st-hud" aria-live="off"></div>
+      </div>
+    </section>
+
+    <!-- REPLAY -->
+    <section data-panel="replay" hidden>
+      <div class="block">
+        <span class="eyebrow">As a responder would have seen it</span>
+        <select id="rp-scenario" class="region" aria-label="Scenario">
+          <option value="ncal">California lightning siege, Aug 2020</option>
+          <option value="oregon">Oregon Labor Day fires, Sept 2020</option>
+          <option value="colorado">Colorado, Oct 2020</option>
+        </select>
+        <p class="note" id="rp-blurb"></p>
+      </div>
+      <div class="block">
+        <div class="clock" id="rp-clock"></div>
+        <div class="transport">
+          <button class="btn primary" id="rp-play">Play</button>
+          <button class="btn" id="rp-step" title="Next satellite overpass">Next pass</button>
+          <button class="btn" id="rp-restart" title="Restart">Restart</button>
+          <select id="rp-speed" class="btn" aria-label="Speed"><option value="1">1×</option><option value="4" selected>4×</option><option value="12">12×</option></select>
+        </div>
+        <div class="stats" id="rp-readout"></div>
+      </div>
+      <div class="block">
+        <h3><span>Needs a call</span><span class="pill flag" id="rp-flag-count">0</span></h3>
+        <p class="note">A new fire right next to a burning one: <b>spot fire</b> or <b>separate start</b>? From space they look the same. Click a yellow ring to decide.</p>
+        <div class="rows" id="rp-flags"></div>
+      </div>
+      <div class="block">
+        <h3><span>Biggest fires right now</span><span class="hint">click for similar past fires</span></h3>
+        <div class="rows" id="rp-fires"></div>
+      </div>
+    </section>
+
+    <!-- STUDY -->
+    <section data-panel="study" hidden>
+      <div class="block" style="padding-bottom:0;border-bottom:0"><button class="btn" id="study-back">← Back to the map</button></div>
+      <div id="study-intro" class="block">
+        <span class="eyebrow">A five-minute pilot</span>
+        <h2>One fire, or several?</h2>
+        <p class="lede">You'll see 12 clusters of satellite fire detections, coloured from first to last day. For each one, decide whether it was made by one fire or by several separate fires. Some are from US fires where the answer is on record; some are from Indonesia and the Kansas prairie, where no one has mapped it.</p>
+        <p class="lede">Each cluster is shown in one of four views, rotated so every view gets used: a flat map, pre-fire satellite imagery, 3D terrain, or a space-time cube where height is time. At the end you'll see how your calls compare with the record, which view helped, and which algorithm setting your judgment implies.</p>
+        <p class="note">Your answers stay in this browser. You can download them at the end.</p>
+        <div><button class="btn primary big" id="study-start">Start</button></div>
+      </div>
+      <div id="study-trial" hidden>
+        <div class="block">
+          <div style="display:flex;justify-content:space-between;align-items:center;gap:8px">
+            <span class="eyebrow" id="trial-count"></span>
+            <span class="viewtag" id="trial-view"></span>
+          </div>
+          <div class="progress"><i id="trial-progress"></i></div>
+          <p class="trial-q">Were these detections made by one fire, or by several separate fires?</p>
+          <p class="note" id="trial-meta"></p>
+          <div class="choice" id="trial-choice">
+            <button data-a="one" aria-pressed="false">One fire<small>a single ignition that spread</small></button>
+            <button data-a="several" aria-pressed="false">Several fires<small>separate ignitions</small></button>
+          </div>
+          <div>
+            <p class="note" style="margin-bottom:6px">How confident are you?</p>
+            <div class="conf" id="trial-conf">
+              <label><input type="radio" name="conf" value="1"><span>1</span></label>
+              <label><input type="radio" name="conf" value="2"><span>2</span></label>
+              <label><input type="radio" name="conf" value="3"><span>3</span></label>
+              <label><input type="radio" name="conf" value="4"><span>4</span></label>
+              <label><input type="radio" name="conf" value="5"><span>5</span></label>
+            </div>
+            <div class="ends" style="display:flex;justify-content:space-between;font-size:11px;color:var(--muted);margin-top:2px"><span>guessing</span><span>certain</span></div>
+          </div>
+          <div>
+            <label class="note" for="trial-why" style="display:block;margin-bottom:6px">What did you notice? (optional)</label>
+            <textarea id="trial-why" placeholder="e.g. two separate starting points, a gap of several days, a ridge between them"></textarea>
+          </div>
+          <div style="display:flex;justify-content:space-between;gap:8px">
+            <button class="btn" id="trial-skip">Skip</button>
+            <button class="btn primary big" id="trial-next" disabled>Next</button>
+          </div>
+        </div>
+      </div>
+      <div id="study-results" hidden>
+        <div class="block">
+          <span class="eyebrow">Your results</span>
+          <h2 id="res-headline"></h2>
+          <p class="lede" id="res-lede"></p>
+        </div>
+        <div class="block">
+          <h3>Accuracy by view (clusters with a known answer)</h3>
+          <div class="chart" id="res-views"></div>
+        </div>
+        <div class="block">
+          <h3>Settings that agree with your judgment</h3>
+          <div class="chart" id="res-heat"></div>
+          <p class="note" id="res-heat-note"></p>
+        </div>
+        <div class="block">
+          <h3>Answers revealed</h3>
+          <div class="reveal" id="res-reveal"></div>
+        </div>
+        <div class="block">
+          <div class="presets">
+            <button class="btn primary" id="res-csv">Download CSV</button>
+            <button class="btn" id="res-json">Download JSON</button>
+            <button class="btn" id="res-again">Do another 12</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </aside>
+
+  <div class="stage">
+    <div id="map" role="region" aria-label="Map of fire detections"></div>
+    <div class="mapbar">
+      <div class="seg" id="viewseg" role="group" aria-label="Representation">
+        <button data-v="map" aria-pressed="false">Map</button>
+        <button data-v="sat3d" aria-pressed="true" title="Satellite imagery from the year before the fire, draped over 3D terrain. Drag with the right mouse button (or two fingers) to tilt and turn.">Satellite 3D</button>
+        <button data-v="cube" aria-pressed="false">Space-time</button>
+      </div>
+      <div class="layers-wrap" id="layers-wrap">
+        <button class="mapbtn" id="layers-btn" aria-expanded="false" aria-controls="layers-pop">Layers</button>
+        <div class="pop" id="layers-pop" hidden>
+          <div class="toggles">
+            <label><input type="checkbox" id="show-hulls" checked> Fire outlines</label>
+            <label><input type="checkbox" id="show-ign" checked> Where each fire started</label>
+            <label><input type="checkbox" id="show-perims" checked> Official perimeters</label>
+            <label><input type="checkbox" id="show-origins" checked> Official points of origin</label>
+          </div>
+        </div>
+      </div>
+    </div>
+    <aside class="inspector" id="inspector" hidden aria-live="polite">
+      <header>
+        <div style="display:grid;gap:3px;min-width:0"><span class="eyebrow" id="insp-eyebrow"></span><h3 id="insp-title"></h3></div>
+        <button class="iconbtn" id="insp-close" aria-label="Close">×</button>
+      </header>
+      <div class="insp-body" id="insp-body"></div>
+    </aside>
+    <div class="legend" id="legend"></div>
+    <details class="key-toggle mapcard" id="st-info" hidden><summary class="eyebrow">Fire details</summary><div class="mapcard-body" id="st-info-body"></div></details>
+    <div class="timebar" id="timebar">
+      <button class="iconbtn" id="play" aria-label="Play the fire season">
+        <svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true"><path d="M2 1l9 5-9 5z" fill="currentColor"/></svg>
+      </button>
+      <input type="range" id="tmax" min="0" max="366" step="1" aria-label="Show detections up to this date">
+      <output id="tmax-out"></output>
+    </div>
+    <div class="rp-timeline" id="rp-timeline" hidden>
+      <div class="hist" id="rp-hist"></div>
+      <input type="range" id="rp-seek" min="0" max="1000" step="1" aria-label="Replay time">
+      <div class="ends"><span id="rp-t0"></span><span class="eyebrow" style="letter-spacing:.04em">detections per 6 hours · drag to jump</span><span id="rp-t1"></span></div>
+    </div>
+    <canvas id="st-canvas" class="windcanvas" hidden aria-hidden="true"></canvas>
+    <div class="rp-timeline st-swipe" id="st-swipe" hidden>
+      <div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px"><b id="sw-left"></b><span class="eyebrow">drag to compare</span><b id="sw-right"></b></div>
+      <input type="range" id="sw-mix" min="0" max="100" step="1" value="100" aria-label="Before and after imagery">
+      <span class="note" id="sw-note"></span>
+    </div>
+    <div class="rp-timeline st-player" id="st-player" hidden>
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+        <button class="btn primary" id="st-play">Play</button>
+        <select id="st-speed" class="btn" aria-label="Speed"><option value="slow">1 day / 10 s</option><option value="normal" selected>1 day / 4 s</option><option value="fast">1 day / 1.5 s</option></select>
+        <span class="clock" id="st-clock" style="font-size:15px;margin-left:auto"></span>
+      </div>
+      <div class="hist" id="st-hist"></div>
+      <input type="range" id="st-seek" min="0" max="1000" step="1" aria-label="Fire time">
+      <div class="ends"><span id="st-t0"></span><span class="eyebrow" style="letter-spacing:.04em">new detections per day · dashed line: reported start</span><span id="st-t1"></span></div>
+    </div>
+    <div id="tip" class="tip" hidden></div>
+    <div class="busy" id="busy" hidden>Loading…</div>
+  </div>
+
+  <div class="page" id="page-result" data-page="result">
+    <div class="page-inner result">
+      <div class="page-head">
+        <span class="eyebrow">Building on Cattau et al. 2016</span>
+        <h2>How many fires does the satellite get right?</h2>
+        <p class="lede">Satellites don't see fires, just hot pixels. The 2016 paper turned those pixels into fires with one simple rule. I rebuilt it and tested it on 1,431 US fires to see how far it goes today.</p>
+      </div>
+
+      <ol class="climb" aria-label="Share of fires grouped correctly">
+        <li>
+          <b class="pct">57%</b>
+          <div class="bar"><i style="width:56.7%"></i></div>
+          <span class="t">The 2016 rule, as is</span>
+          <small>It was made for peat fires in Indonesia, so this is just my starting line.</small>
+        </li>
+        <li>
+          <b class="pct">75%</b>
+          <div class="bar"><i style="width:75.2%"></i></div>
+          <span class="t">My best automatic try</span>
+          <small>Machine learning included. Nothing I tried got past this.</small>
+        </li>
+        <li class="hl">
+          <b class="pct">88%</b>
+          <div class="bar"><i style="width:88.2%"></i></div>
+          <span class="t">Plus a person</span>
+          <small>In my simulation, someone checks just the biggest 5% of fires.</small>
+        </li>
+      </ol>
+
+      <div class="panel why">
+        <h3>What I found</h3>
+        <p>The wall at 75% is fires that burn into each other. From space they look like one fire. A computer can't tell them apart, but a person often can, as long as you show them the right ones.</p>
+        <div class="presets"><button class="btn primary" data-gw="default">See it on the map →</button><button class="btn" data-go2="results">How I tested it →</button></div>
+      </div>
+      <p class="note">Data: NASA FIRMS and US interagency fire maps, 2020–2024. I built this with an AI assistant doing most of the coding.</p>
+    </div>
+  </div>
+
+  <div class="page" id="page-results" data-page="results" hidden>
+    <div class="page-inner result">
+      <div class="page-head">
+        <span class="eyebrow">Details</span>
+        <h2>How I tested it</h2>
+        <p class="lede">I ran the 2016 rule on five years of US fires and checked every answer against the official fire maps. Then I tried to beat it.</p>
+      </div>
+      <div class="tiles" id="tiles"></div>
+      <div class="grid2">
+        <div class="panel">
+          <h3>Same story in every region</h3>
+          <div class="chart" id="nat-chart"></div>
+          <p class="note" id="nat-finding"></p>
+        </div>
+        <div class="panel">
+          <h3>Which fires a person should check</h3>
+          <div class="chart" id="rev-chart"></div>
+          <p class="note" id="rev-note"></p>
+        </div>
+      </div>
+      <div class="about-wrap">
+      <div class="prose about">
+        <h3>What I took from the 2016 paper</h3>
+        <p>The rule: satellite detections in the same or next-door 1&nbsp;km square within 4 days are one fire, and the earliest one is where it started. The paper used it to find where fires begin in Indonesia's peat swamps. A 2025 follow-up (Mahood et al.) notes the right window changes from place to place, and most countries have no fire maps to check it against. The US does, so that's where I tested it.</p>
+        <h3>How I scored it</h3>
+        <ul>
+          <li>565,000 NASA satellite detections and 1,431 official fires, 2020–2024.</li>
+          <li>A fire counts as right when one group holds at least 90% of its detections and that group is at least 90% that fire.</li>
+          <li>I split the US into six regions and always scored on a region I didn't tune on.</li>
+        </ul>
+        <h3>What's still rough</h3>
+        <ul>
+          <li>The 88% is a simulation. It assumes the person always splits a merged fire correctly.</li>
+          <li>I only used MODIS (1&nbsp;km pixels). The newer VIIRS sensor (375&nbsp;m) could change the picture.</li>
+          <li>"One fire" in official records can be a whole complex of lightning starts.</li>
+        </ul>
+        <h3>What I'd do next</h3>
+        <ul>
+          <li>Try finer satellite data to see if it breaks the 75% wall.</li>
+          <li>Build the review step for real: the system suggests where to split a big fire, and a fire manager or local resident confirms it.</li>
+        </ul>
+        <h3>Sources</h3>
+        <ol class="refs">
+          <li>Cattau, M.E., Harrison, M.E., Shinyo, I., Tungau, S., Uriarte, M., DeFries, R. (2016). Sources of anthropogenic fire ignitions on the peat-swamp landscape in Kalimantan, Indonesia. <i>Global Environmental Change</i> 39: 205–219. <a href="https://doi.org/10.1016/j.gloenvcha.2016.05.005" target="_blank" rel="noopener">doi</a></li>
+          <li>Mahood, A.L., Tuff, T., Cattau, M.E., et al. (2025). The properties of individual fire events are essential for understanding global fire regimes. <i>Global Ecology and Biogeography</i> 34(11): e70145. <a href="https://doi.org/10.1111/geb.70145" target="_blank" rel="noopener">doi</a></li>
+          <li>NASA FIRMS MODIS C6.1 active fire archive. <a href="https://firms.modaps.eosdis.nasa.gov/" target="_blank" rel="noopener">firms.modaps.eosdis.nasa.gov</a></li>
+          <li>WFIGS Interagency Fire Perimeters, National Interagency Fire Center. <a href="https://data-nifc.opendata.arcgis.com/" target="_blank" rel="noopener">data-nifc.opendata.arcgis.com</a></li>
+          <li>ERA5 reanalysis (Hersbach et al. 2020) via Open-Meteo. <a href="https://open-meteo.com/en/docs/historical-weather-api" target="_blank" rel="noopener">open-meteo.com</a></li>
+          <li>Maps: OpenFreeMap (© OpenStreetMap contributors), Mapzen terrain tiles on AWS, Sentinel-2 cloudless by EOX. <a href="https://s2maps.eu" target="_blank" rel="noopener">s2maps.eu</a></li>
+        </ol>
+        <p class="note">Built by <span id="author">[your name]</span>. I set the questions and checked the results; an AI coding assistant (Claude) wrote most of the code. <a id="repo-link" href="#" target="_blank" rel="noopener">Code on GitHub</a>.</p>
+      </div>
+      </div>
+    </div>
+  </div>
+
+</main>
+    <div class="intro" id="intro" hidden>
+  <div class="card" role="dialog" aria-labelledby="intro-title">
+    <span class="eyebrow">Built on Cattau et al. 2016</span>
+    <h2 id="intro-title">Same Pixels, Different Fires</h2>
+    <p class="lede">Satellites see hot pixels, not fires. The 2016 paper grouped those pixels into fires with one simple rule. I rebuilt it, tested it on 1,431 US fires, and tried to push it further.</p>
+    <ol class="steps">
+      <li><button data-go="result"><b>The result</b><span>57% → 75% → 88%: how far I could push the 2016 rule.</span></button></li>
+      <li><button data-go="stories"><b>Fire stories</b><span>Watch a real fire grow in 3D, with the wind it burned in. Then see how dry it was before, and the scar after.</span></button></li>
+
+      <li><button data-go="replay"><b>Live replay</b><span>Replay a 2020 outbreak pass by pass, the way a responder would have seen it, and make the calls.</span></button></li>
+      <li><button data-go="results"><b>Details</b><span>How I tested it: the numbers behind the result, region by region.</span></button></li>
+    </ol>
+    <div style="display:flex;justify-content:flex-end"><button class="btn primary big" id="intro-close">Close</button></div>
+  </div>
+</div>
+
+<script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
+<script type="module" src="js/app.js"></script>
+</body>
+</html>

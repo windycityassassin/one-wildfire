@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 16 16%22%3E%3Crect width=%2216%22 height=%2216%22 rx=%223%22 fill=%22%230a0b0c%22/%3E%3Ccircle cx=%228%22 cy=%228%22 r=%223.2%22 fill=%22%23ff6a2b%22/%3E%3C/svg%3E">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>How this was made</title>
+<meta name="theme-color" content="#0a0b0c">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:wght@400;500&display=swap">
+<style>
+:root { --bg: #0a0b0c; --ink: #ece8e1; --muted: #8e8981; --line: #2c2b29; --fire: #ff6a2b; --machine: #8fd3ff; --life: #a6f05a; color-scheme: dark; }
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--ink); font: 16px/1.65 "Inter", system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+main { max-width: 42rem; margin: 0 auto; padding: 72px 20px 120px; }
+a { color: inherit; text-underline-offset: 3px; text-decoration-color: rgba(236, 232, 225, .4); }
+.back { font-size: 13px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); text-decoration: none; }
+h1 { font: 400 clamp(44px, 7vw, 64px)/1 "Instrument Serif", Georgia, serif; margin: 28px 0 14px; letter-spacing: -.01em; }
+h2 { font: 400 28px/1.2 "Instrument Serif", Georgia, serif; margin: 56px 0 10px; }
+p, li { color: #cfcac2; }
+.lede { font: 400 21px/1.45 "Instrument Serif", Georgia, serif; color: var(--muted); }
+ul { padding-left: 1.1em; } li { margin: 6px 0; }
+b { color: var(--ink); font-weight: 500; }
+table { width: 100%; border-collapse: collapse; margin: 14px 0; font-size: 14px; font-variant-numeric: tabular-nums; }
+th, td { text-align: left; padding: 8px 10px 8px 0; border-bottom: 1px solid var(--line); }
+th { font-weight: 500; color: var(--muted); }
+td.n { text-align: right; }
+.note { font-size: 14px; color: var(--muted); }
+</style>
+</head>
+<body>
+<main>
+  <a class="back" href="index.html">← 705 km to 1.6 m</a>
+  <h1>How this was made</h1>
+  <p class="lede">A prototype, built in a few days, to show the kind of work I would like to do: the same fire seen by a satellite, a drone and a person, with the person's judgement feeding back into the model.</p>
+
+  <h2>705 km: from pixels to a fire</h2>
+  <ul>
+    <li><b>Detections.</b> NASA FIRMS MODIS Collection 6.1 (Terra and Aqua), vegetation fires, confidence ≥ 30, inside the official perimeter of the 2015 Soda Fire (NIFC Interagency Fire Perimeter History, 2015-IDOYD-000889, 279,144 acres): 652 detections, 10–15 August 2015. Each is drawn as a 1 km square (a MODIS pixel is nominally 1 km² directly below the satellite and larger towards the edge of the swath).</li>
+    <li><b>The strike and the first pass.</b> The BLM gives lightning as the cause; the strike point is not in the data, so the bolt is drawn at the middle of the first hot spots (Aqua, 20:07 UTC on 10 August 2015). The squares of the first 36 hours then appear one at a time, in the order seen and nearest the strike first. The satellite scene draws that pass: Aqua flies north in the afternoon (1:30 pm ascending node) and scans a strip 2,330 km wide (NASA MODIS specifications). The fire's first pixels were 3.1 × 1.7 km, so it sat near the western edge of the strip; the track is drawn about 870 km east of the fire, tilted 14° west of north. Both numbers are my estimates. The satellite is drawn far larger than life.</li>
+    <li><b>The 2016 rule.</b> A re-implementation of the space-time grouping in Cattau et al. (2016): two detections belong to the same fire if they are within 1.5 km and 4 days of each other (the closest equivalent, on raw detection centres, of the published rule: the same 1 km cell or any of its 8 neighbours, within 4 days; the paper tested 1–14 days and used 4). On the Soda Fire it finds <b>38</b> groups. A wider window (4 km, 14 days) finds 3, the largest holding 99% of the detections.</li>
+    <li><b>The national test.</b> 565,317 detections from 2020–2024 were scored against 1,431 official US fires (WFIGS perimeters ≥ 100 acres) in six regions, holding out each region in turn. A fire counts as recovered when one group holds ≥ 90% of its detections and ≥ 90% of that group is that fire. The 2016 setting recovers 57%; the wider window, 74%. Of the fires the wider window still gets wrong, 235 of 370 are joined to other burning nearby (another fire, or a burn with no official outline) and 135 are still split. Every fire, a map and three more examples (Creek, East Fork, Paddock) are on the <a href="proof/national.html">proof page</a>. On the front page, each dot is one fire at its perimeter's centre; the dots change from the 2016 result to the wider window's in a random order: the 328 fires the wider window fixes light up, the 78 it breaks turn grey, and the percentage counts them as they go.</li>
+    <li><b>Wind.</b> ERA5 (ECMWF) 10 m hourly wind via the Open-Meteo archive API with <code>models=era5</code>, on a 5 × 5 grid over the fire. Streak speed is scaled for visibility.</li>
+  </ul>
+
+  <h2>44 m: the drone</h2>
+  <ul>
+    <li><b>Imagery.</b> Marie et al. (2023): RGB orthophoto (1.0 cm per pixel) and surface model from a DJI Mavic 2 Pro flown in a cross-grid at 44 m above ground on 30 June 2022 over SodaNaturalArea2, a site on the Soda Fire boundary, processed in OpenDroneMap (doi:10.7923/59M8-5S68).</li>
+    <li><b>Field data and canopy heights.</b> Zaiats &amp; Caughlin (2023): the burn line, 85 field plots at this site, every plant in them mapped with RTK GPS to about 3 cm, and the canopy height model (doi:10.7923/96mc-a063). Both datasets are CC BY 4.0.</li>
+    <li><b>Plot size: an open question.</b> The dataset README, the 2024 paper and the project's final report describe the plots as 25 m² (5 m cells). The mapped plants, though, spread out to about 5 m from each plot centre at every site (92% within 5 m, only 38% within 2.8 m), which fits a circle of about 5 m radius. I have not been able to reconcile the two. The page draws 5 m circles because that is where the crew's plants are, and reports <b>counts</b>, never plants per hectare, because a density would depend on which area is right. This is a question for the authors.</li>
+    <li><b>Re-centring the circles.</b> The listed plot centres sit up to about 1.5 m from where the crew's own mapped plants place each circle (5–10% of plants fall just outside 5 m, at every site in the dataset). Each circle is moved to the nearest centre within 1.5 m that holds the most of its plants. Plants still outside are left out, and so is one plot (374) whose 121 plants lie mostly elsewhere, which looks like a labelling slip. That leaves 84 circles: 54 burned, 30 unburned.</li>
+    <li><b>The flight animation.</b> Drawn on the map over the white square (the mapped site) to show the pattern, not the real camera positions (which are not published): east–west passes 20 m apart (the real flight also flew north–south). The frame under the drone is the ground one photo covers from 44 m with the Mavic 2 Pro (13.2 × 8.8 mm sensor, 10.3 mm lens: about 56 × 38 m), and the pale strips are the ground already covered. The drone is drawn many times its size, and the flight is sped up.</li>
+    <li><b>The 3D block.</b> The surface model resampled to 25 cm and lightly smoothed, with the orthophoto draped on top; each field circle uses the full 1 cm photo.</li>
+    <li><b>"The drone's eye".</b> The canopy height model shown directly: anything above roughly 20 cm lights up.</li>
+    <li><b>Which shrubs the drone found.</b> My quick re-run of a standard approach: local maxima on the lightly smoothed canopy height model (≥ 20 cm, one per 0.8 m), matched to the crew's shrubs within 0.6 m. It is cruder than the authors' pipeline, so the page also quotes their published rates (Zaiats et al. 2024: adults 63%, juveniles 13%).</li>
+  </ul>
+  <table>
+    <tr><th>Field shrubs found by my re-run</th><th class="n">Tall (≥ 25 cm)</th><th class="n">Young (&lt; 25 cm)</th></tr>
+    <tr><td>Burned side, 54 circles</td><td class="n">78 of 123 (63%)</td><td class="n">5 of 64 (8%)</td></tr>
+    <tr><td>Unburned side, 30 circles</td><td class="n">385 of 756 (51%)</td><td class="n">27 of 1,169 (2.3%)</td></tr>
+  </table>
+  <p class="note">My re-run also produces many detections that match no mapped shrub (484 of 949 inside the circles): split crowns, dead wood, other plants. They are left out of the pictures, which only mark which of the crew's shrubs were found.</p>
+
+  <h2>1.6 m: you</h2>
+  <ul>
+    <li>Only the 16 burned circles that hold any young shrubs are played; the crew found none in the other 38, and the game says so. The first is the circle with the most young shrubs after the story's example, so you learn what one looks like; the example comes last; the rest follow in a fixed shuffled order.</li>
+    <li>"Check" pairs your taps with the crew's young shrubs one to one, nearest first, within 50 cm, so one tap in a clump can only ever find one shrub. Nothing about the answer is shown until you check. Taps with no young shrub nearby turn grey.</li>
+        <li>The scoreboard shows one circle at a time (the young shrubs you found, the ones the drone found, and the crew's count), and adds every circle up at the end. Over all 54 burned circles: crew 64, drone 5.</li>
+    <li>On a phone or tablet with AR (Chrome on Android, WebXR), the page asks before the game whether to play it in AR: each circle then floats in front of you at 1:12 on its own 1 cm photo, with the game panel over the camera view. Lean in to look closer, pinch to resize, twist to turn, tap to mark. Leaving AR carries on with the same circle on screen.</li>
+  </ul>
+
+  <h2>Limits</h2>
+  <ul>
+    <li>One fire and one drone site. The young-shrub numbers rest on 64 shrubs in 54 circles, and almost half of them grow in one circle.</li>
+    <li>The detection re-run is not the published method; the published rates (63% of adults, 13% of juveniles, averaged over 10 sites) are the ones to trust.</li>
+    <li>The plot area is unresolved (see above), so no densities are given.</li>
+    <li>Nobody has yet tested whether people find young shrubs better in 3D, AR or VR than on a flat map. That is the question this prototype is built to ask.</li>
+  </ul>
+
+  <h2>How it was built</h2>
+  <p>I set the questions, chose the data and checked every number against the source files. An AI coding assistant (Claude) wrote most of the code. The pipeline is in Python (rasterio, shapely, scipy); the page uses MapLibre GL and three.js.</p>
+
+  <h2>Sources</h2>
+  <ul class="note">
+    <li>Cattau, M.E., Harrison, M.E., Shinyo, I., Tungau, S., Uriarte, M., DeFries, R. (2016). Sources of anthropogenic fire ignitions on the peat-swamp landscape in Kalimantan, Indonesia. <i>Global Environmental Change</i> 39: 205–219. doi:10.1016/j.gloenvcha.2016.05.005</li>
+    <li>Mahood, A.L., Tuff, T., Cattau, M.E., et al. (2025). The properties of individual fire events are essential for understanding global fire regimes. <i>Global Ecology and Biogeography</i> 34(11): e70145.</li>
+    <li>Zaiats, A., Caughlin, T.T., Cruz, J., Pilliod, D.S., Cattau, M.E., Liu, R., Rachman, R., Maliha, M., Delparte, D.M., Clare, J.D.J. (2024). Propagating observation errors to enable scalable and rigorous enumeration of plant population abundance with aerial imagery. <i>Methods in Ecology and Evolution</i> 15(11): 2074–2086. doi:10.1111/2041-210X.14421</li>
+    <li>Giglio, L., Schroeder, W., Justice, C.O. (2016). The collection 6 MODIS active fire detection algorithm and fire products. <i>Remote Sensing of Environment</i> 178: 31–41. doi:10.1016/j.rse.2016.02.054</li>
+    <li>Bureau of Land Management (2016). <i>Soda Fire Emergency Stabilization and Rehabilitation: status report</i>. BLM Boise District.</li>
+    <li>Germino, M.J., Torma, P., Fisk, M., Applestein, C. (2022). Monitoring for adaptive management of burned sagebrush-steppe rangelands: addressing variability and uncertainty on the 2015 Soda Megafire. <i>Rangelands</i> 44(1): 99–110. doi:10.1016/j.rala.2021.12.002</li>
+    <li>Innes, R.J. (2019). <i>Artemisia tridentata</i> subsp. <i>wyomingensis</i>. Fire Effects Information System, USDA Forest Service.</li>
+    <li>Hersbach, H. et al. (2020). The ERA5 global reanalysis. <i>Q. J. R. Meteorol. Soc.</i> 146: 1999–2049. doi:10.1002/qj.3803</li>
+    <li>Zaiats, A., Caughlin, T.T. (2023). Low-cost UAS platforms to quantify and predict post-fire recovery in arid shrublands [dataset]. University of Idaho. doi:10.7923/96mc-a063</li>
+    <li>Marie, V., Zaiats, A., Roser, A., Olsoy, P., Delparte, D., Wickersham, R., Caughlin, T.T. (2023). Digital aerial imagery (RGB and multispectral) from the 2015-SODA wildfire boundary [dataset]. University of Idaho. doi:10.7923/59M8-5S68</li>
+    <li>NASA FIRMS MODIS C6.1; NIFC Interagency Fire Perimeter History; WFIGS Interagency Fire Perimeters; ERA5 (Hersbach et al. 2020) via Open-Meteo; Esri World Imagery; OpenStreetMap via OpenFreeMap.</li>
+  </ul>
+</main>
+</body>
+</html>

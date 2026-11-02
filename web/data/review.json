@@ -1,0 +1,55 @@
+{
+ "budgets": [
+  0,
+  0.01,
+  0.02,
+  0.05,
+  0.1,
+  0.2
+ ],
+ "curves": {
+  "model": [
+   0.754,
+   0.812,
+   0.8372,
+   0.8777,
+   0.8896,
+   0.9064
+  ],
+  "largest": [
+   0.754,
+   0.8113,
+   0.8512,
+   0.8819,
+   0.9057,
+   0.921
+  ],
+  "random": [
+   0.754,
+   0.7561,
+   0.7561,
+   0.7624,
+   0.7708,
+   0.7841
+  ]
+ },
+ "n_fires": 1431,
+ "n_events": 36129,
+ "n_events_with_fire": 1857,
+ "n_merged": 90,
+ "auc": 0.883,
+ "ap": 0.274,
+ "base_rate": 0.048,
+ "features": [
+  "log_size",
+  "duration_days",
+  "extent_km",
+  "n_cores",
+  "core_gap_km",
+  "core_gap_days",
+  "weakest_link",
+  "n_weak_links",
+  "peak_daily",
+  "night_share"
+ ]
+}

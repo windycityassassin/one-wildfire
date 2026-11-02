@@ -1,0 +1,592 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 16 16%22%3E%3Crect width=%2216%22 height=%2216%22 rx=%223%22 fill=%22%230a0b0c%22/%3E%3Ccircle cx=%228%22 cy=%228%22 r=%223.2%22 fill=%22%23ff6a2b%22/%3E%3C/svg%3E">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>705 km to 1.6 m</title>
+<meta name="description" content="The 2015 Soda Fire seen three ways: by a satellite, by a drone seven years later, and by a person standing at the fire line.">
+<meta name="theme-color" content="#0a0b0c">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="https://unpkg.com/maplibre-gl@5.24.0/dist/maplibre-gl.css">
+<script type="importmap">
+{ "imports": {
+  "three": "https://unpkg.com/three@0.169.0/build/three.module.js",
+  "three/addons/": "https://unpkg.com/three@0.169.0/examples/jsm/"
+} }
+</script>
+<style>
+:root {
+  --bg: #0a0b0c;
+  --ink: #ece8e1;
+  --muted: #8e8981;
+  --faint: #2c2b29;
+  --fire: #ff6a2b;
+  --machine: #8fd3ff;
+  --life: #a6f05a;
+  --person: #f2efe8;
+  --serif: "Instrument Serif", "Iowan Old Style", Georgia, serif;
+  --sans: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html { background: var(--bg); }
+body { margin: 0; background: var(--bg); color: var(--ink); font: 16px/1.55 var(--sans); -webkit-font-smoothing: antialiased; }
+a { color: inherit; text-underline-offset: 3px; text-decoration-color: color-mix(in srgb, currentColor 40%, transparent); }
+a:hover { text-decoration-color: currentColor; }
+button { font: inherit; color: inherit; }
+:focus-visible { outline: 1.5px solid var(--ink); outline-offset: 3px; }
+.fire { color: var(--fire); } .machine { color: var(--machine); } .life { color: var(--life); }
+
+/* the stage: one fixed picture behind the whole story */
+#stage { position: fixed; inset: 0; z-index: 0; }
+#map, #ground { position: absolute; inset: 0; transition: opacity 1.2s ease; }
+#ground { opacity: 0; pointer-events: none; }
+#stage.at-ground #ground { opacity: 1; pointer-events: auto; }
+#stage.at-ground #map { opacity: 0; pointer-events: none; }
+#heat, #wind, #fx { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; transition: opacity .8s; }
+#map { background-color: #050607; }
+#stage.at-ground #fx, #stage.at-ground #heat { opacity: 0; }
+#map .maplibregl-ctrl-attrib { background: rgba(10, 11, 12, .6); color: var(--muted); font-size: 10px; }
+#map .maplibregl-ctrl-attrib a { color: var(--muted); }
+#stage::before { /* a soft dark band where the captions sit */
+  content: ""; position: absolute; inset: 0; z-index: 1; pointer-events: none;
+  background: linear-gradient(90deg, rgba(10, 11, 12, .72) 0, rgba(10, 11, 12, .45) 28%, transparent 50%);
+}
+#stage.at-ground::before { background: linear-gradient(90deg, rgba(10, 11, 12, .86) 0, rgba(10, 11, 12, .62) 30%, transparent 52%); }
+@media (max-width: 760px) { #stage::before, #stage.at-ground::before { background: linear-gradient(0deg, rgba(10, 11, 12, .8) 0, transparent 45%); } }
+#stage::after { /* soft vignette so captions always sit on dark */
+  content: ""; position: absolute; inset: 0; pointer-events: none;
+  background: radial-gradient(120% 90% at 60% 50%, transparent 55%, rgba(10, 11, 12, .55) 100%);
+}
+
+/* clock: the only number that lives on the picture */
+#clock {
+  position: fixed; right: 28px; top: 24px; z-index: 3; text-align: right;
+  font: 400 15px/1.3 var(--sans); color: var(--muted); font-variant-numeric: tabular-nums;
+  opacity: 0; transition: opacity .6s;
+}
+#clock b { display: block; font: 400 34px/1 var(--serif); color: var(--ink); letter-spacing: .01em; }
+#clock.on { opacity: 1; }
+
+/* altitude: three ways of seeing, and where you are */
+#alt {
+  position: fixed; left: 28px; top: 50%; transform: translateY(-50%); z-index: 3;
+  height: min(56vh, 460px); width: 120px; pointer-events: none;
+}
+#alt .rail { position: absolute; left: 4px; top: 0; bottom: 0; width: 1px; background: var(--faint); }
+#alt .stn { position: absolute; left: 0; transform: translateY(-50%); display: flex; align-items: center; gap: 12px;
+  font: 500 11px/1.2 var(--sans); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); transition: color .4s; }
+#alt .stn::before { content: ""; width: 9px; height: 1px; background: currentColor; }
+#alt .stn i { font-style: normal; display: block; color: var(--muted); opacity: .7; letter-spacing: .04em; text-transform: none; font-weight: 400; }
+#alt .stn.here { color: var(--ink); }
+#alt { text-shadow: 0 0 10px rgba(10, 11, 12, .95), 0 0 2px rgba(10, 11, 12, .9); }
+#alt .dot { position: absolute; left: 1px; width: 7px; height: 7px; border-radius: 50%; background: var(--ink); transform: translateY(-50%);
+  box-shadow: 0 0 0 4px rgba(236, 232, 225, .12); transition: top .25s linear; }
+
+/* the story: captions that scroll over the stage */
+main { position: relative; z-index: 2; pointer-events: none; }
+.step { min-height: 100vh; display: flex; align-items: center; padding: 0 8vw 0 max(200px, 16vw); }
+.step.tall { min-height: 160vh; }
+.cap { pointer-events: auto; max-width: 25rem; }
+.cap p { margin: 0; font: 400 clamp(24px, 2.4vw, 32px)/1.22 var(--serif); letter-spacing: .005em; text-wrap: pretty; }
+.cap p + p { margin-top: .7em; }
+.cap .small { font: 400 15px/1.55 var(--sans); color: var(--muted); letter-spacing: 0; margin-top: 1.1em; }
+.cap .small b { color: var(--ink); font-weight: 500; }
+.cap .ch { font: 500 11px/1 var(--sans); letter-spacing: .14em; text-transform: uppercase; color: var(--muted); margin-bottom: 16px; }
+.cap { text-shadow: 0 1px 18px rgba(10, 11, 12, .9), 0 0 2px rgba(10, 11, 12, .8); }
+
+/* opening */
+.hero { min-height: 100vh; display: grid; place-items: center; text-align: center; padding: 0 24px; }
+.hero h1 { margin: 0; font: 400 clamp(64px, 11vw, 168px)/.92 var(--serif); letter-spacing: -.015em; }
+.hero h1 span { color: var(--muted); font-style: italic; }
+.hero p { margin: 28px auto 0; max-width: 30rem; font: 400 clamp(19px, 1.6vw, 22px)/1.4 var(--serif); color: var(--muted); }
+.hero .cue { margin-top: 64px; font: 500 11px/1 var(--sans); letter-spacing: .14em; text-transform: uppercase; color: var(--muted); }
+.hero .cue::after { content: ""; display: block; width: 1px; height: 44px; margin: 14px auto 0; background: linear-gradient(var(--muted), transparent); animation: cue 2.4s ease-in-out infinite; }
+@keyframes cue { 0%, 100% { transform: scaleY(.4); transform-origin: top; } 50% { transform: scaleY(1); transform-origin: top; } }
+
+/* references: the claim itself is the link; a small number follows it */
+a.ref { text-decoration: underline dotted; text-decoration-color: rgba(236, 232, 225, .35); text-underline-offset: 4px; text-decoration-thickness: 1px; cursor: pointer; }
+a.ref:hover { text-decoration-color: currentColor; }
+a.ref sup { font: 500 10px/1 var(--sans); color: var(--muted); margin-left: 2px; letter-spacing: 0; vertical-align: super; text-shadow: none; }
+/* the portal: every source opens as its own page over the story, growing out of the link you clicked */
+#portal { position: fixed; inset: 0; z-index: 20; display: grid; place-items: center; padding: 4vh 4vw;
+  background: rgba(6, 7, 8, .72); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+  clip-path: circle(0 at var(--px, 50%) var(--py, 50%)); transition: clip-path .7s cubic-bezier(.6, 0, .2, 1); }
+#portal[hidden] { display: grid; visibility: hidden; }
+#portal.on { clip-path: circle(150vmax at var(--px, 50%) var(--py, 50%)); visibility: visible; }
+#portal .sheet { position: relative; width: min(46rem, 100%); max-height: 100%; display: flex; flex-direction: column; overflow: hidden;
+  border-radius: 18px; background: var(--bg); box-shadow: 0 0 0 1px rgba(242, 239, 232, .1), 0 40px 100px rgba(0, 0, 0, .6); }
+#portal.page .sheet { width: min(64rem, 100%); height: 100%; }
+#portal .bar { display: flex; align-items: center; gap: 18px; padding: 14px 16px 12px 28px; border-bottom: 1px solid rgba(242, 239, 232, .08); flex: none; }
+#portal .n { font: 500 11px/1 var(--sans); letter-spacing: .14em; text-transform: uppercase; color: var(--muted); margin-right: auto; }
+#portal-open { font-size: 13px; color: var(--muted); }
+#portal-open[hidden] { display: none; }
+#portal .x { border: 0; background: none; color: var(--muted); font-size: 28px; cursor: pointer; line-height: 1; padding: 0 6px; }
+#portal .x:hover { color: var(--ink); }
+#portal article { overflow: auto; padding: 30px 40px 36px; }
+#portal article[hidden], #portal iframe[hidden] { display: none; }
+#portal h3 { font: 400 clamp(34px, 4.4vw, 48px)/1.05 var(--serif); margin: 0 0 20px; letter-spacing: -.005em; }
+#portal-body p { margin: 0 0 14px; color: #cfcac2; font-size: 17px; line-height: 1.65; max-width: 36rem; }
+#portal-body b { color: var(--ink); font-weight: 500; }
+#portal .src { margin: 26px 0 0; padding-top: 16px; border-top: 1px solid #2c2b29; font-size: 13px; line-height: 1.6; color: var(--muted); }
+#portal .src a { color: var(--ink); word-break: break-word; }
+#portal iframe { flex: 1; width: 100%; border: 0; background: var(--bg); }
+#sources { margin-top: 72px; }
+#sources h2 { font: 400 26px/1.2 var(--serif); margin: 0 0 14px; }
+#reflist { margin: 0; padding-left: 1.4em; font-size: 13px; line-height: 1.6; color: #8e8981; }
+#reflist li { margin: 0 0 10px; padding-left: 4px; scroll-margin-top: 40vh; }
+#reflist li b { color: #cfcac2; font-weight: 500; }
+#reflist li a { color: #cfcac2; word-break: break-word; }
+#reflist li:target { color: var(--ink); }
+
+/* opening: begin with or without the narrator */
+.hero .begin .btn[hidden], #snd[hidden] { display: none; }
+.hero .vnote { margin: 14px auto 0; font: 400 13px/1.4 var(--sans); color: var(--muted); }
+.hero .vnote[hidden] { display: none; }
+.hero .begin { pointer-events: auto; margin-top: 44px; display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+.hero .begin .btn { display: inline-flex; align-items: center; gap: 8px; padding: 10px 20px; font-size: 15px; }
+.hero .begin svg { width: 18px; height: 18px; }
+.hero .cue { margin-top: 36px; }
+#snd { position: fixed; z-index: 7; left: 24px; bottom: 22px; width: 38px; height: 38px; border-radius: 50%; border: 1px solid rgba(242, 239, 232, .22);
+  background: rgba(16, 17, 18, .6); color: var(--muted); cursor: pointer; display: grid; place-items: center; transition: color .2s, border-color .2s; }
+#snd svg { width: 18px; height: 18px; }
+#snd .w { display: none; } #snd[aria-pressed="true"] .w { display: inline; } #snd[aria-pressed="true"] .m { display: none; }
+#snd[aria-pressed="true"] { color: var(--ink); border-color: rgba(242, 239, 232, .45); }
+
+/* guesses: a small question you can answer as you read */
+.guess { margin-top: 26px; text-shadow: none; }
+.guess .gq { display: block; font: 400 14px/1.4 var(--sans); color: var(--muted); margin-bottom: 10px; }
+.guess .opts { display: flex; gap: 8px; flex-wrap: wrap; }
+.guess button { border: 1px solid rgba(242, 239, 232, .28); background: rgba(16, 17, 18, .55); color: var(--ink); border-radius: 999px; padding: 8px 16px; font-size: 14px; cursor: pointer; transition: background .2s, border-color .2s, transform .15s; }
+.guess button:hover { border-color: rgba(242, 239, 232, .6); }
+.guess button:active { transform: scale(.96); }
+.guess button.picked { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+.guess.done button:not(.picked) { opacity: .4; }
+.guess.done button.right { box-shadow: 0 0 0 2px var(--life); }
+.cap .answer { animation: rise .6s cubic-bezier(.2, .8, .2, 1); }
+.cap .later { display: none; }
+.cap .later.in { display: block; animation: rise .6s cubic-bezier(.2, .8, .2, 1); }
+.cap .gone { display: none; }
+#count-ask { margin-top: 1em; }
+/* words on the land itself: the two sides of the fire line */
+.landtag { position: absolute; left: 0; top: 0; z-index: 4; pointer-events: none; opacity: 0; transition: opacity .6s; will-change: transform;
+  white-space: nowrap; font: 500 13px/1 var(--sans); letter-spacing: .08em; text-transform: uppercase; color: var(--ink);
+  text-shadow: 0 1px 10px rgba(10, 11, 12, .95), 0 0 2px rgba(10, 11, 12, .9); }
+.landtag.on { opacity: .92; }
+.landtag.burnt { color: var(--fire); }
+.gfb { margin-top: 18px !important; font: 400 15px/1.5 var(--sans) !important; color: var(--ink); animation: rise .6s cubic-bezier(.2, .8, .2, 1); }
+@keyframes rise { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+
+/* the game: no box, just the task, a button and a race */
+#tools { margin-top: 22px; text-shadow: none; opacity: .35; pointer-events: none; transition: opacity .4s; }
+#tools.on { opacity: 1; pointer-events: auto; }
+.g-top { display: flex; align-items: center; justify-content: space-between; gap: 12px; font: 500 11px/1 var(--sans); letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+#pips { display: flex; gap: 4px; }
+#pips i { width: 7px; height: 7px; border-radius: 50%; box-shadow: inset 0 0 0 1px rgba(242, 239, 232, .3); transition: background .3s, box-shadow .3s, transform .3s; }
+#pips i.now { box-shadow: inset 0 0 0 1.5px var(--ink); transform: scale(1.25); }
+#pips i.done { background: rgba(242, 239, 232, .55); box-shadow: none; }
+#pips i.all { background: var(--life); box-shadow: none; }
+#toolstat { margin: 12px 0 0 !important; font: 400 22px/1.3 var(--serif) !important; color: var(--ink); min-height: 2.6em; text-shadow: 0 1px 18px rgba(10, 11, 12, .9); }
+#toolstat .next { display: block; margin-top: 6px; font: 400 14px/1.4 var(--sans); color: var(--muted); }
+#legend { display: flex; flex-wrap: wrap; gap: 6px 16px; margin: 10px 0 0 !important; font: 400 13px/1.4 var(--sans) !important; color: var(--muted); }
+#legend[hidden], #legend [hidden] { display: none; }
+#legend span { display: inline-flex; align-items: center; gap: 6px; }
+#legend .k { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+#legend .k.you { background: var(--person); } #legend .k.nope { background: #77736c; }
+#legend .k.crew { box-shadow: inset 0 0 0 2px var(--life); }
+#legend em { font-style: normal; }
+#legend .k.num { width: 15px; height: 15px; background: var(--life); color: var(--bg); font: 600 10px/15px var(--sans); text-align: center; font-style: normal; }
+#legend .k.drone { box-shadow: inset 0 0 0 1.5px var(--machine); width: 13px; height: 13px; }
+#tools .btns { display: flex; align-items: center; gap: 18px; margin-top: 16px; }
+#tools .btns .btn { min-width: 128px; }
+#allcrew, #undo, #hint { font-size: 13px; color: var(--muted); }
+#undo[hidden], #allcrew[hidden], #hint[hidden] { display: none; }
+/* the game's guide: one young shrub, pointed out on the picture */
+#pointer { position: absolute; left: 0; top: 0; z-index: 4; pointer-events: none; opacity: 0; transition: opacity .5s; will-change: transform; }
+#pointer.on { opacity: 1; }
+#pointer .ring { position: absolute; left: -16px; top: -16px; width: 32px; height: 32px; border-radius: 50%; box-shadow: 0 0 0 2px var(--life), 0 0 18px rgba(166, 240, 90, .45); animation: point 1.6s ease-in-out infinite; }
+#pointer .lead { position: absolute; left: 12px; top: -12px; width: 58px; height: 1px; background: var(--life); transform-origin: 0 0; transform: rotate(-38deg); }
+#pointer .tag { position: absolute; left: 58px; top: -60px; white-space: nowrap; font: 500 14px/1.25 var(--sans); color: var(--ink); text-shadow: 0 1px 10px rgba(10, 11, 12, .95), 0 0 2px rgba(10, 11, 12, .9); }
+#pointer .tag b { display: block; color: var(--life); font-weight: 500; }
+#pointer.flip .lead { left: -12px; transform: rotate(-142deg); }
+#pointer.flip .tag { left: auto; right: 58px; text-align: right; }
+@keyframes point { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.18); } }
+#allcrew { margin-left: auto; }
+#score { margin-top: 22px; padding-top: 16px; border-top: 1px solid rgba(242, 239, 232, .12); }
+#score[hidden] { display: none !important; }
+#score .lab { font-size: 12px; color: var(--muted); margin-bottom: 10px; }
+#score .row { display: grid; grid-template-columns: 78px 1fr 34px; align-items: center; gap: 12px; margin: 7px 0; font-size: 13px; color: var(--muted); }
+#score .bar { height: 6px; border-radius: 3px; background: rgba(242, 239, 232, .08); overflow: hidden; }
+#score .bar i { display: block; height: 100%; width: 0; border-radius: 3px; transition: width .7s cubic-bezier(.2, .8, .2, 1); }
+#score .you i { background: var(--person); } #score .drone i { background: var(--machine); } #score .crew i { background: var(--life); }
+#score .row b { font: 400 22px/1 var(--serif); color: var(--ink); text-align: right; font-variant-numeric: tabular-nums; }
+#gsum { margin: 12px 0 0 !important; font: 400 14px/1.5 var(--sans) !important; color: #cfcac2; animation: rise .6s; }
+#gsum b { font-weight: 500; }
+
+/* the national test: one big number that moves as the dots change */
+.cap .pct { margin-top: 14px; display: flex; align-items: baseline; gap: 14px; }
+.cap .pct b { font: 400 clamp(64px, 7vw, 96px)/1 var(--serif); color: var(--fire); font-variant-numeric: tabular-nums; font-weight: 400; }
+.cap .pct span { font-size: 15px; color: var(--muted); }
+.dotkey { display: inline-flex; align-items: center; gap: 6px; margin-right: 14px; color: var(--ink); }
+.dotkey .k { width: 9px; height: 9px; border-radius: 50%; background: #8e8981; display: inline-block; }
+.dotkey .k.right { background: #ffd36e; }
+.dotkey .k.fixed { background: var(--fire); box-shadow: 0 0 0 2px rgba(255, 106, 43, .35); }
+
+/* your run, at the close */
+#run { font-family: var(--sans); margin-bottom: 48px; padding: 20px 0; border-top: 1px solid rgba(242, 239, 232, .14); border-bottom: 1px solid rgba(242, 239, 232, .14); }
+#run .t { font: 500 11px/1 var(--sans); letter-spacing: .14em; text-transform: uppercase; color: var(--muted); margin-bottom: 14px; }
+#run .q { padding: 12px 0; }
+#run .q + .q { border-top: 1px solid rgba(242, 239, 232, .08); }
+#run .qq { font-size: 15px; color: #cfcac2; margin-bottom: 10px; }
+#run .cmp { display: flex; flex-wrap: wrap; gap: 8px 34px; }
+#run .cmp span { display: flex; flex-direction: column; gap: 2px; font-size: 12px; color: var(--muted); }
+#run .cmp b { font: 400 30px/1.1 var(--serif); color: var(--ink); }
+#run .cmp b.fire { color: var(--fire); } #run .cmp b.machine { color: var(--machine); }
+#run .row { display: grid; grid-template-columns: 78px 1fr 34px; align-items: center; gap: 12px; margin: 7px 0; font-size: 13px; color: var(--muted); }
+#run .bar { height: 6px; border-radius: 3px; background: rgba(242, 239, 232, .08); overflow: hidden; }
+#run .bar i { display: block; height: 100%; border-radius: 3px; }
+#run .you i { background: var(--person); } #run .drone i { background: var(--machine); } #run .crew i { background: var(--life); }
+#run .row b { font: 400 22px/1 var(--serif); color: var(--ink); text-align: right; font-variant-numeric: tabular-nums; }
+
+#stage.tapping #ground { cursor: crosshair; }
+.btn { border: 1px solid rgba(242, 239, 232, .28); background: transparent; border-radius: 999px; padding: 8px 16px; cursor: pointer; font-size: 14px; color: var(--ink); transition: background .2s, border-color .2s; }
+.btn:hover { background: rgba(242, 239, 232, .08); border-color: rgba(242, 239, 232, .5); }
+.btn.solid { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+.btn.solid:hover { background: #fff; }
+.btn[disabled] { opacity: .35; cursor: default; }
+
+/* closing */
+.end { min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 18vh 24px; background: linear-gradient(transparent, var(--bg) 22%); position: relative; z-index: 5; }
+.end .in { max-width: 38rem; pointer-events: auto; }
+.end .why { font: 400 clamp(19px, 1.6vw, 22px)/1.45 var(--serif); color: var(--muted); margin: 0 0 32px; text-wrap: pretty; }
+.end .lead { font: 500 11px/1 var(--sans); letter-spacing: .14em; text-transform: uppercase; color: var(--muted); margin: 0 0 16px; }
+.end .q { font: 400 clamp(30px, 3.4vw, 46px)/1.15 var(--serif); margin: 0; text-wrap: balance; }
+.end .who { margin-top: 48px; color: var(--muted); font-size: 15px; }
+.end .who b { color: var(--ink); font-weight: 500; }
+.end nav { margin-top: 28px; display: flex; flex-wrap: wrap; gap: 10px 22px; font-size: 14px; color: var(--muted); }
+.end .credits { margin-top: 56px; font-size: 12px; line-height: 1.6; color: #6c6862; max-width: 38rem; }
+
+/* the game in AR: hidden until AR starts; then the camera view fills the screen and this sits over it */
+.arlayer { position: fixed; inset: 0; z-index: 30; display: none; background: transparent; touch-action: none; }
+.arlayer.on { display: block; }
+.arlayer .ar-top { position: absolute; left: 12px; right: 12px; top: 12px; display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  font: 400 13px/1.4 var(--sans); color: var(--ink); text-shadow: 0 1px 8px rgba(0, 0, 0, .9); }
+.arlayer .ar-top .btn { background: rgba(10, 11, 12, .7); }
+.arlayer .ar-btns { display: flex; gap: 8px; flex: none; margin-left: auto; }
+.arlayer .ar-top { align-items: flex-start; }
+.arlayer .coach { padding: 10px 14px; border-radius: 12px; background: rgba(10, 11, 12, .72); font-size: 15px; max-width: 30rem; text-shadow: none; }
+.arlayer .coach[hidden] { display: none; }
+#ar-mark { position: absolute; right: 20px; bottom: 24px; min-width: 132px; padding: 16px 30px; font-size: 19px; font-weight: 500; box-shadow: 0 6px 24px rgba(0, 0, 0, .45); }
+#ar-mark[hidden] { display: none; }
+#ar-mark:disabled { opacity: .45; }
+#ar-ui .coach .lookfor { margin-top: 8px; }
+#ar-ui .coach .lookfor img { width: 64px; height: 64px; }
+/* the young sagebrush to look for: three close-ups from the drone's 1 cm photo */
+.lookfor { display: flex; gap: 8px; margin-top: 12px; }
+.lookfor[hidden] { display: none; }
+.lookfor img { width: 84px; height: 84px; border-radius: 8px; object-fit: cover; box-shadow: 0 0 0 1px rgba(242, 239, 232, .2); }
+.arintro { margin-top: 18px; text-shadow: none; }
+.arintro .small { margin-top: 0 !important; color: var(--ink) !important; }
+.arintro ol { margin: 16px 0 18px; padding-left: 1.3em; font: 400 15px/1.5 var(--sans); color: var(--ink); text-shadow: 0 1px 12px rgba(10, 11, 12, .95); }
+.arintro li + li { margin-top: 6px; }
+.arintro .opts { display: flex; gap: 10px; }
+.arlayer .ar-panel { position: absolute; left: 12px; bottom: 12px; width: min(380px, calc(100% - 24px)); max-height: 62vh; overflow: auto;
+  padding: 14px 16px; border-radius: 14px; background: rgba(10, 11, 12, .78); }
+.arlayer .ar-panel[hidden] { display: none; }
+/* the opening's question: a card at the bottom left (where the game's panel will be), the sentence large; words
+   naming something on the land are in its colour */
+.ar-story { position: absolute; left: 16px; bottom: 16px; width: min(460px, calc(100% - 140px)); padding: 18px 22px 18px;
+  border-radius: 16px; background: rgba(10, 11, 12, .82); box-shadow: 0 10px 40px rgba(0, 0, 0, .45);
+  border: 1px solid rgba(242, 239, 232, .1); animation: rise .6s cubic-bezier(.2, .8, .2, 1); }
+.ar-story[hidden] { display: none; }
+.ar-story .st-top { display: flex; justify-content: space-between; font: 500 11px/1 var(--sans); letter-spacing: .14em;
+  text-transform: uppercase; color: var(--muted); }
+.ar-story .st-top { margin-bottom: 12px; }
+.ar-story .st-text { margin: 0; font: 400 25px/1.25 var(--serif); color: var(--ink); min-height: 2.5em;
+  transition: opacity .28s ease, transform .28s ease; }
+.ar-story .st-text.swap { opacity: 0; transform: translateY(6px); }
+.ar-story .st-text b { font-weight: 400; color: #fff; text-decoration: underline; text-decoration-color: rgba(242, 239, 232, .45); text-underline-offset: 4px; }
+#ar-ask { margin-top: 16px; }
+#ar-ask[hidden] { display: none; }
+#ar-ask button { font-size: 18px; padding: 12px 24px; min-width: 64px; }
+/* the controls, right side: closer/further, and under them a round pad (turn round, tip toward you or back) */
+.ar-ctl { position: absolute; right: 16px; top: 50%; transform: translateY(-50%); display: flex; flex-direction: column; align-items: center; gap: 14px; }
+.ar-ctl .zoom { display: flex; flex-direction: column; gap: 8px; }
+.ar-ctl .pad { display: grid; grid-template: repeat(3, 48px) / repeat(3, 48px); padding: 6px; border-radius: 50%;
+  background: rgba(10, 11, 12, .45); border: 1px solid rgba(242, 239, 232, .12); }
+.ar-ctl .pad #ar-up { grid-area: 1 / 2; } .ar-ctl .pad #ar-left { grid-area: 2 / 1; } .ar-ctl .pad .hub { grid-area: 2 / 2; }
+.ar-ctl .pad #ar-right { grid-area: 2 / 3; } .ar-ctl .pad #ar-down { grid-area: 3 / 2; }
+.ar-ctl .hub { width: 8px; height: 8px; border-radius: 50%; background: rgba(242, 239, 232, .35); place-self: center; }
+.ar-ctl button { width: 48px; height: 48px; border-radius: 50%; border: 1px solid rgba(242, 239, 232, .28); background: rgba(10, 11, 12, .7);
+  color: var(--ink); display: grid; place-items: center; cursor: pointer; padding: 0; transition: background .2s, transform .15s; }
+.ar-ctl .pad button { border-color: transparent; background: transparent; }
+.ar-ctl button:active { transform: scale(.9); background: rgba(242, 239, 232, .2); }
+.ar-ctl svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+/* the land's own labels, while they show in AR */
+.arlayer .landtag { font-size: 15px; }
+#ar-ui #tools { margin-top: 0; }
+#ar-ui #toolstat { font-size: 19px !important; min-height: 0; }
+.aroffer .gq { color: var(--ink); font-size: 16px; text-shadow: 0 1px 12px rgba(10, 11, 12, .95), 0 0 2px rgba(10, 11, 12, .9); }
+.aroffer .opts button:first-child { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+
+/* phones: captions sit low over the picture, the rail goes horizontal at the top */
+/* between a phone and a desktop window (a tablet held sideways): the caption keeps its column but takes less of it */
+@media (min-width: 761px) and (max-width: 1100px) {
+  .step { padding-left: max(150px, 14vw); }
+  .cap { max-width: 21rem; }
+  .cap p { font-size: clamp(20px, 2.3vw, 26px); }
+  .cap .small { font-size: 14px; }
+  #alt .stn span { font-size: 11px; }
+}
+@media (max-width: 760px) {
+  .step { align-items: flex-end; padding: 0 20px; }
+  .cap { max-width: none; background: linear-gradient(transparent, rgba(10, 11, 12, .85) 60px); margin: 0 -20px; padding: 70px 20px 12vh; }
+  .cap p { font-size: 25px; }
+  #alt { left: 20px; right: 20px; top: 16px; transform: none; width: auto; height: 34px; }
+  #alt .rail { left: 0; right: 0; top: 4px; bottom: auto; width: auto; height: 1px; }
+  #alt .stn { top: 4px !important; flex-direction: column; align-items: flex-start; gap: 6px; transform: translateX(-4px); font-size: 10px; }
+  #alt .stn::before { width: 1px; height: 7px; }
+  #alt .stn i { display: none; }
+  #alt .stn span { white-space: nowrap; }
+  #alt .stn[data-a="1.6"] { transform: translateX(calc(-100% + 4px)); align-items: flex-end; }
+  #alt .dot { top: 4px !important; }
+  #clock { top: 62px; right: 20px; }
+  #clock b { font-size: 26px; }
+  /* the game: the circle keeps the top half, the panel stays compact */
+  [data-step="you"] .cap { padding: 40px 20px 18px; }
+  [data-step="you"] .cap > .small, [data-step="you"] .cap > .ch { display: none; }
+  [data-step="you"] .cap > p { font-size: 21px; }
+  #tools { margin-top: 10px; }
+  #toolstat { font-size: 19px !important; min-height: 0 !important; }
+  #score { margin-top: 12px !important; padding-top: 10px !important; }
+  #score .lab { grid-column: 1 / -1; margin-bottom: 2px; }
+  #score { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px 14px; }
+  #score .row { display: flex; flex-direction: column-reverse; align-items: flex-start; gap: 5px; margin: 0; }
+  #score .row .bar { width: 100%; order: -1; }
+  #score .row b { font-size: 24px; text-align: left; }
+  #score .row .who { font-size: 12px; }
+  #gsum { grid-column: 1 / -1; }
+  #tools .btns { margin-top: 12px; }
+  #toolstat { margin-top: 8px !important; }
+  #portal { padding: 0; place-items: end stretch; }
+  #portal .sheet { width: 100%; max-height: 88vh; border-radius: 18px 18px 0 0; }
+  #portal.page .sheet { height: 94vh; max-height: 94vh; }
+  #portal article { padding: 22px 22px 30px; }
+  #portal .bar { padding-left: 22px; }
+  #snd { left: auto; right: 16px; bottom: auto; top: 54px; }
+  #clock { top: 100px; }
+}
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+</style>
+</head>
+<body>
+
+<div id="stage">
+  <div id="map"></div>
+  <canvas id="heat"></canvas>
+  <canvas id="wind"></canvas>
+  <canvas id="fx"></canvas>
+  <div id="ground"></div>
+</div>
+
+<div id="alt" aria-hidden="true">
+  <div class="rail"></div>
+  <div class="stn" data-a="705000" style="top:0%"><span>705 km<i>satellite</i></span></div>
+  <div class="stn" data-a="44" style="top:74.5%"><span>44 m<i>drone</i></span></div>
+  <div class="stn" data-a="1.6" style="top:100%"><span>1.6 m<i>you</i></span></div>
+  <div class="dot" style="top:0%"></div>
+</div>
+
+<div id="clock" aria-live="polite"><b></b><span></span></div>
+
+<main>
+  <section class="hero" data-step="intro">
+    <div>
+      <h1>705 km <span>to</span> 1.6 m</h1>
+      <p>One wildfire, seen by a satellite, by a drone, and by a person.</p>
+      <div class="begin">
+        <button class="btn solid" id="begin-sound"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9v6h4l5 4V5L8 9H4z" fill="currentColor"/><path d="M16 8.5a5 5 0 0 1 0 7M18.5 6a8.5 8.5 0 0 1 0 12" stroke="currentColor" stroke-width="1.6" fill="none" stroke-linecap="round"/></svg>Begin with narration</button>
+        <button class="btn" id="begin-quiet">Begin quietly</button>
+      </div>
+      <p class="vnote" id="voice-note" hidden>Narrated by an AI voice for now, standing in for mine.</p>
+      <div class="cue">or scroll</div>
+    </div>
+  </section>
+
+  <section class="step tall" data-step="sat"><div class="cap">
+    <div class="ch">From space · 705 km</div>
+    <p><a class="ref" data-ref="pass">10 August 2015, 2:07 pm.</a> <a class="ref" data-ref="modis">A satellite passes over the American West, looking for heat.</a></p>
+    <p class="small"><a class="ref" data-ref="pass">The pale band is the strip it scans in one pass, 2,330 km wide.</a></p>
+  </div></section>
+
+  <section class="step tall" data-step="spot"><div class="cap">
+    <p>Near the edge of the strip, it detects <span class="fire">heat</span>.</p>
+    <p class="small"><a class="ref" data-ref="firms">Closer in, it is a square of heat, about 1 km across.</a></p>
+  </div></section>
+
+  <section class="step tall" data-step="start"><div class="cap">
+    <p>What is it? <a class="ref" data-ref="soda">A fire. Lightning started it earlier that day, on the border of Idaho and Oregon.</a></p>
+    <p class="small"><a class="ref" data-ref="firms">By 2:07 pm the satellite saw <span id="n0">9</span> squares of heat.</a> <a class="ref" data-ref="strike">Each is a place it saw burning: white when new, red as it ages.</a></p>
+  </div></section>
+
+  <section class="step tall" data-step="pixels"><div class="cap">
+    <p>Five days of passes, and this is all the satellites saw: <span class="fire">spots of heat</span>.</p>
+    <p class="small"><a class="ref" data-ref="firms">No flames, no smoke. Each square is about 1 km across.</a></p>
+    <div class="guess" data-guess="fires">
+      <span class="gq">Your guess: how many fires is this?</span>
+      <span class="opts"><button data-v="1">One</button><button data-v="10">About 10</button><button data-v="40">About 40</button></span>
+    </div>
+    <p class="gfb" id="lock-fires" hidden></p>
+  </div></section>
+
+  <section class="step" data-step="split"><div class="cap">
+    <p>To count fires from space, a computer has to decide which spots belong together.</p>
+    <p>Using <a class="ref" data-ref="cattau2016">a rule from 2016</a>, it counted <a class="ref" data-ref="rerun"><span id="n16">38</span> different fires</a>.</p>
+    <p class="small">Each colour is one of them.</p>
+  </div></section>
+
+  <section class="step" data-step="one"><div class="cap">
+    <p>But there was only <span class="fire">one</span>.</p>
+    <p class="small"><a class="ref" data-ref="soda"><b>The Soda Fire</b></a>, <a class="ref" data-ref="la">almost as big as the city of Los Angeles</a>. Given a little more room, the rule saw one fire too.</p>
+    <p class="gfb" id="fb-fires" hidden></p>
+  </div></section>
+
+  <section class="step tall" data-step="us"><div class="cap">
+    <p>Was that luck? I tried it on 1,431 US fires, from 2020 to 2024.</p>
+    <div class="pct"><b id="pct">57%</b><span><a class="ref" data-ref="national">of them counted correctly</a></span></div>
+    <p class="small"><span class="dotkey"><i class="k right"></i>right</span><span class="dotkey"><i class="k fixed"></i>fixed by more room</span><span class="dotkey"><i class="k"></i>wrong</span><br>Each dot is one fire. More room fixed 328 and broke 78.</p>
+  </div></section>
+
+  <section class="step tall" data-step="spread"><div class="cap">
+    <p>Back at the Soda Fire: <a class="ref" data-ref="spread">pushed by the wind, it ran about 50 km north in five days.</a> <a class="ref" data-ref="soda">It burned for 13 days before it was contained.</a></p>
+    <p class="small"><a class="ref" data-ref="era5">The white streaks are the wind, hour by hour.</a></p>
+  </div></section>
+
+  <section class="step tall" data-step="descend"><div class="cap">
+    <div class="ch">From a drone · 44 m</div>
+    <p>Will the land come back?</p>
+    <p class="small"><a class="ref" data-ref="flight">Seven years later, a drone flew over one corner of the burn: the white square.</a> <a class="ref" data-ref="survey">The pale strips are the ground its camera covered.</a></p>
+  </div></section>
+
+  <section class="step tall" data-step="missed"><div class="cap">
+    <p><a class="ref" data-ref="sfm">Its photos become 3D</a>, and <a class="ref" data-ref="chm">the drone sees <span class="machine">height</span>.</a> <a class="ref" data-ref="burnline">The fire stopped at <span class="fire">the orange line</span>.</a></p>
+  </div></section>
+
+  <!-- one page from the line to the question: the two sides, then (on the narrator's {circle}) one circle and what the
+       drone found there, then (on {ask}) the question. The .later parts appear on those cues -->
+  <section class="step tall" data-step="count"><div class="cap">
+    <p id="count-sides"><a class="ref" data-ref="burnline">On one side of <span class="fire">the line</span>, the old sagebrush survived. On the other, it burned.</a></p>
+    <p class="later" id="count-drone"><a class="ref" data-ref="sagebrush">On the burned side, life starts again in <span class="life">young shrubs</span>.</a> <a class="ref" data-ref="rates">In this circle, the drone found <span class="machine" id="myf">3</span>.</a></p>
+    <div class="later" id="count-ask">
+      <p><a class="ref" data-ref="crew">People walked here too, counting on foot.</a></p>
+      <div class="guess" data-guess="crew">
+        <span class="gq">How many young shrubs did they find?</span>
+        <span class="opts" id="crew-opts"></span>
+      </div>
+    </div>
+    <p class="answer" id="crew-ans" hidden>They found <span class="life" id="myoung">30</span>.</p>
+    <p class="small" id="crew-more" hidden><a class="ref" data-ref="rates">Across the burn, the drone caught 2 in 3 big shrubs, but <b id="pyoung">8 in 100</b> young ones</a>.</p>
+  </div></section>
+
+  <section class="step" data-step="you"><div class="cap">
+    <div class="ch">From the ground · 1.6 m</div>
+    <p id="you-turn">Your turn.</p>
+    <p id="you-next" hidden>Next, you look for the young shrubs yourself.</p>
+    <div class="guess aroffer" id="ar-offer" hidden>
+      <span class="gq">Would you like to see the next part in AR?</span>
+      <span class="opts"><button id="ar-yes">Yes, in AR</button><button id="ar-no">No, stay here</button></span>
+    </div>
+    <div class="arintro" id="ar-intro" hidden>
+      <p class="small"><a class="ref" data-ref="lookfor">What you are looking for: young sagebrush, small grey-green tufts on bare ground.</a></p>
+      <div class="lookfor"><img src="data/drone/soda2/examples/young-1.jpg" alt=""><img src="data/drone/soda2/examples/young-2.jpg" alt=""><img src="data/drone/soda2/examples/young-3.jpg" alt=""></div>
+      <ol>
+        <li>Point the tablet at a table or the floor. The land appears there; go into the green circle when you are ready.</li>
+        <li>Move or lean the tablet until the white ring sits on a young sagebrush, and press Mark.</li>
+        <li>When you have marked all you can see, press Check to compare with the field crew and the drone.</li>
+      </ol>
+      <span class="opts"><button class="btn solid" id="ar-start">Start AR</button><button class="btn" id="ar-back">Back</button></span>
+    </div>
+    <div id="tools" aria-label="The game">
+      <div class="g-top"><span id="gcount">Circle 1 of 16</span><span id="pips" aria-hidden="true"></span></div>
+      <p id="toolstat" aria-live="polite"></p>
+      <p id="legend" hidden><span><i class="k you"></i>your taps</span><span class="grey"><i class="k nope"></i>not a young shrub, by the crew's count</span><span><i class="k crew"></i>young shrub the crew found</span><span class="clump" hidden><i class="k num"></i><em></em></span><span class="drn"><i class="k drone"></i>drone found it</span></p>
+      <div class="btns"><button class="btn solid" id="go">Check</button><a href="#" id="hint" hidden>Show me one</a><a href="#" id="undo" hidden>Undo last tap</a><a href="#" id="allcrew">Skip the game</a></div>
+      <div id="score">
+        <div class="lab">This circle</div>
+        <div class="row you"><span class="who">You</span><span class="bar"><i></i></span><b>0</b></div>
+        <div class="row drone"><span class="who">Drone</span><span class="bar"><i></i></span><b>0</b></div>
+        <div class="row crew"><span class="who">Field crew</span><span class="bar"><i></i></span><b>0</b></div>
+        <p id="gsum" hidden></p>
+      </div>
+    </div>
+  </div></section>
+
+  <section class="end" data-step="end">
+    <div class="in">
+      <div id="run" hidden></div>
+      <p class="why"><a class="ref" data-ref="blm">Counts like these help the people who look after this land judge whether it is recovering, and where it needs more help.</a> From the air alone, this land looks like it is barely coming back. With people on the ground, we can see that it is.</p>
+      <p class="lead">The question I'd like to study in the WILDD lab:</p>
+      <p class="q">If people could step inside the drone's view, in 3D or VR, would they catch what it misses? And would they trust what they see?</p>
+      <!-- To sign the page: put your name in #author and your repository in #code, and remove both `hidden` attributes. -->
+<div class="who"><b id="author">Arjun Prithvi Vadla · </b>Built with an AI coding assistant; every number checked by hand.</div>
+      <nav>
+        <a href="explore.html#stories">Explore 58 more fires</a>
+        <a href="methods.html">How this was made</a>
+        <a href="https://github.com/windycityassassin/one-wildfire" id="code">Code</a>
+      </nav>
+      <section id="sources" aria-label="Sources and notes">
+        <h2>Sources and notes</h2>
+        <ol id="reflist"></ol>
+      </section>
+    </div>
+  </section>
+</main>
+
+<div id="portal" role="dialog" aria-modal="true" aria-labelledby="portal-title" hidden>
+  <div class="sheet">
+    <div class="bar"><span class="n" id="portal-n"></span><a id="portal-open" href="#" target="_blank" rel="noopener" hidden>Open as a page ↗</a><button class="x" id="portal-close" aria-label="Close">×</button></div>
+    <article id="portal-text">
+      <h3 id="portal-title"></h3>
+      <div id="portal-body"></div>
+      <p class="src" id="portal-src"></p>
+    </article>
+    <iframe id="portal-frame" title="Proof" hidden></iframe>
+  </div>
+</div>
+
+<button id="snd" aria-label="Narration" aria-pressed="false" title="Narration"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9v6h4l5 4V5L8 9H4z" fill="currentColor"/><path class="w" d="M16 8.5a5 5 0 0 1 0 7M18.5 6a8.5 8.5 0 0 1 0 12" stroke="currentColor" stroke-width="1.6" fill="none" stroke-linecap="round"/><path class="m" d="M16.5 9.5l5 5M21.5 9.5l-5 5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></button>
+
+<!-- the game in AR: this layer is shown over the camera view (WebXR DOM Overlay); the game panel moves into it -->
+<div id="ar-ui" class="arlayer">
+  <div class="ar-top"><div class="coach" id="ar-coach"><span id="ar-say">This is the whole site. Taking you to the green circle.</span><div class="lookfor" id="ar-look" hidden><img src="data/drone/soda2/examples/young-1.jpg" alt=""><img src="data/drone/soda2/examples/young-2.jpg" alt=""><img src="data/drone/soda2/examples/young-3.jpg" alt=""></div></div><span class="ar-btns"><button class="btn" id="ar-here">Bring it here</button><button class="btn" id="ar-exit">Exit AR</button></span></div>
+  <!-- the opening: a card where the game's panel will be, from the moment AR starts until the question is answered -->
+  <div class="ar-story" id="ar-story" hidden aria-live="polite">
+    <div class="st-top"><span>Your turn</span></div>
+    <p class="st-text" id="st-text"></p>
+    <div class="guess" id="ar-ask" hidden><span class="opts"></span></div>
+  </div>
+  <!-- your controls: closer and further, then a pad to turn the land round and tip it toward you or back -->
+  <div class="ar-ctl" role="group" aria-label="Move the land">
+    <div class="zoom">
+      <button id="ar-in" aria-label="Closer" title="Closer"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></button>
+      <button id="ar-out" aria-label="Further" title="Further"><svg viewBox="0 0 24 24"><path d="M5 12h14"/></svg></button>
+    </div>
+    <div class="pad">
+      <button id="ar-up" aria-label="Tip toward you" title="Tip toward you"><svg viewBox="0 0 24 24"><path d="M6 14.5l6-6 6 6"/></svg></button>
+      <button id="ar-left" aria-label="Turn left" title="Turn left"><svg viewBox="0 0 24 24"><path d="M5.5 13a7 7 0 1 0 2-5.6"/><path d="M4.5 3.8v4.6h4.6"/></svg></button>
+      <span class="hub" aria-hidden="true"></span>
+      <button id="ar-right" aria-label="Turn right" title="Turn right"><svg viewBox="0 0 24 24"><path d="M18.5 13a7 7 0 1 1-2-5.6"/><path d="M19.5 3.8v4.6h-4.6"/></svg></button>
+      <button id="ar-down" aria-label="Tip back" title="Tip back"><svg viewBox="0 0 24 24"><path d="M6 9.5l6 6 6-6"/></svg></button>
+    </div>
+  </div>
+  <div class="ar-panel" id="ar-panel"></div>
+  <button class="btn solid" id="ar-mark" hidden>Mark</button>
+</div>
+
+<script src="https://unpkg.com/maplibre-gl@5.24.0/dist/maplibre-gl.js"></script>
+<script type="module" src="js/journey/main.js"></script>
+</body>
+</html>
